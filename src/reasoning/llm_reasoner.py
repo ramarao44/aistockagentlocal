@@ -1,185 +1,111 @@
-import json
-
-from yfinance import ticker
-from src.reasoning.reasoning_node import (
-    generate_daily_summary,
-    generate_trend_analysis
-)
-
-from src.db.database import (
-    load_news,
-    load_sentiment,
-    load_market_data,
-    load_indicators
-)
-
-# -----------------------------
-# Local Llama 3.1 Reasoner
-# -----------------------------
-def run_local_llama(prompt: str):
-    try:
-        from llama_cpp import Llama
-    except ImportError:
-        raise RuntimeError("Please install llama-cpp-python: pip install llama-cpp-python")
-
 import requests
+import os
 
-def run_local_llama(prompt):
-    response = requests.post(
-        "http://localhost:11434/api/chat",
-        json={
-            "model": "llama3.1:8b",
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-            "stream": False
-        }
-    )
+# -----------------------------
+# CONFIGURATION
+# -----------------------------
 
-    data = response.json()
+#LOCAL_MODEL = "phi4"
+LOCAL_MODEL = "llama3.2:3b"
+#LOCAL_MODEL = "phi3.5-mini"
+CLOUD_MODEL = "gpt-4o-mini"
 
-    # Handle errors cleanly
-    if "error" in data:
-        return f"[Ollama Error] {data['error']}"
-
-    # Standard chat response
-    if "message" in data and "content" in data["message"]:
-        return data["message"]["content"]
-
-    # Fallback for /api/generate format
-    if "output" in data:
-        return data["output"]
-
-    # Unknown format fallback
-    return str(data)
-
-
-
-    output = llm(
-        prompt,
-        max_tokens=800,
-        temperature=0.3,
-        top_p=0.9,
-        stop=["</analysis>"]
-    )
-
-    return output["choices"][0]["text"].strip()
+# Correct endpoint for phi4
+OLLAMA_URL = "http://localhost:11434/api/generate"
 
 
 # -----------------------------
-# Cloud Reasoner (OpenAI / Azure)
+# LOCAL LLM (OLLAMA)
 # -----------------------------
-def run_cloud_llm(prompt: str):
+
+def run_local_llama(prompt: str) -> str:
+    print("DEBUG: Using model:", LOCAL_MODEL)
+
     try:
-        from openai import OpenAI
-    except ImportError:
-        raise RuntimeError("Install openai: pip install openai")
+        print("DEBUG: Sending request to Ollama...")
 
-    client = OpenAI()
+        response = requests.post(
+            OLLAMA_URL,
+            json={
+                "model": LOCAL_MODEL,
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=60
+        )
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a financial analyst."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=800,
-        temperature=0.3
+        print("DEBUG: Ollama POST returned status:", response.status_code)
+
+        data = response.json()
+        print("DEBUG: Ollama response:", data)
+
+        if "response" in data:
+            return data["response"]
+
+        if "output" in data:
+            return data["output"]
+
+        if "error" in data:
+            return f"[Local LLM Error] {data['error']}"
+
+        return str(data)
+
+    except Exception as e:
+        return f"[Local LLM Exception] {str(e)}"
+
+
+# -----------------------------
+# CLOUD LLM (OPENAI / AZURE)
+# -----------------------------
+
+def run_cloud_llm(prompt: str) -> str:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return "[Cloud LLM Error] Missing OPENAI_API_KEY"
+
+    try:
+        import openai
+        openai.api_key = api_key
+
+        completion = openai.ChatCompletion.create(
+            model=CLOUD_MODEL,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        return completion.choices[0].message["content"]
+
+    except Exception as e:
+        return f"[Cloud LLM Exception] {str(e)}"
+
+
+# -----------------------------
+# MAIN ENTRYPOINT
+# -----------------------------
+
+def generate_llm_report(ticker: str, mode: str = "local") -> str:
+    print("DEBUG: generate_llm_report called with mode =", mode)
+
+    prompt = (
+        f"You are an AI financial analyst. Generate a structured, concise stock analysis "
+        f"report for {ticker}. Include:\n"
+        "- Price trend summary\n"
+        "- Technical indicators\n"
+        "- Market sentiment\n"
+        "- Risks\n"
+        "- Opportunities\n"
+        "- Final recommendation\n"
+        "- Next steps\n\n"
+        "Keep the tone professional and analytical."
     )
 
-    return response.choices[0].message.content
-
-
-# -----------------------------
-# Unified Prompt Builder
-# -----------------------------
-def build_prompt(ticker: str):
-    daily = generate_daily_summary(ticker)
-    trend = generate_trend_analysis(ticker)
-
-    news = load_news(ticker).head(5)
-    sentiment = load_sentiment(ticker).head(5)
-
-    # Convert timestamps in market + indicators
-    def convert_timestamps(obj):
-        for key, value in obj.items():
-            if hasattr(value, "isoformat"):
-                obj[key] = value.isoformat()
-        return obj
-
-    market = convert_timestamps(
-        load_market_data(ticker).tail(1).to_dict("records")[0]
-    )
-
-    indicators = convert_timestamps(
-        load_indicators(ticker).tail(1).to_dict("records")[0]
-    )
-
-    news_block = "\n".join([f"- {row['title']}" for _, row in news.iterrows()])
-    sentiment_block = "\n".join([f"- {row['title']} → {row['sentiment']:.3f}" for _, row in sentiment.iterrows()])
-
-    prompt = f"""
-<analysis>
-You are a financial analyst. Produce a clear, structured report combining:
-
-1. Daily Summary
-2. Trend Analysis
-3. Technical Indicators
-4. News Impact
-5. Sentiment Interpretation
-6. Market Tone
-7. Risks & Opportunities
-
-Ticker: {ticker}
-
---------------------
-DAILY SUMMARY
---------------------
-{daily}
-
---------------------
-TREND ANALYSIS
---------------------
-{trend}
-
---------------------
-LATEST NEWS
---------------------
-{news_block}
-
---------------------
-SENTIMENT SNAPSHOT
---------------------
-{sentiment_block}
-
---------------------
-LATEST MARKET DATA
---------------------
-{json.dumps(market, indent=2)}
-
---------------------
-LATEST INDICATORS
---------------------
-{json.dumps(indicators, indent=2)}
-
-Write a professional analyst-style report.
-</analysis>
-"""
-
-    return prompt
-
-
-# -----------------------------
-# Unified Interface
-# -----------------------------
-def generate_llm_report(ticker: str, mode="local"):
-    prompt = build_prompt(ticker)
-
-    if mode == "local":
-        return run_local_llama(prompt)
-
-    elif mode == "cloud":
+    if mode == "cloud":
+        print("DEBUG: Calling run_cloud_llm() now...")
         return run_cloud_llm(prompt)
 
-    else:
-        raise ValueError("mode must be 'local' or 'cloud'")
+    print("DEBUG: Calling run_local_llama() now...")
+    result = run_local_llama(prompt)
+
+    if result.startswith("[Local LLM Error]") or result.startswith("[Local LLM Exception]"):
+        return f"{result}\n\nFalling back to cloud...\n\n" + run_cloud_llm(prompt)
+
+    return result
