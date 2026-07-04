@@ -1,17 +1,15 @@
+import json
+import re
 import yfinance as yf
 import pandas as pd
-import cloudscraper
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import quote_plus
 
-# Moneycontrol mapping for delivery data
-MONEYCONTROL_SYMBOL_MAP = {
-    "RELIANCE": "RI",
-    "TCS": "TC",
-    "INFY": "IC",
-    "HDFCBANK": "HDF01",
-    # Add more as needed
-}
+try:
+    import cloudscraper
+except ImportError:
+    cloudscraper = None
 
 # ---------------------------------------------------------
 # Ticker Normalization (NSE + BSE)
@@ -344,6 +342,12 @@ def fetch_nse_delivery_data(symbol: str):
 
     url = f"https://www.nseindia.com/api/quote-equity?symbol={symbol.upper()}"
 
+    if cloudscraper is None:
+        return {
+            "success": False,
+            "error": "cloudscraper is not installed"
+        }
+
     scraper = cloudscraper.create_scraper(
         browser={
             "browser": "chrome",
@@ -385,54 +389,146 @@ def fetch_nse_delivery_data(symbol: str):
         }
 
 
+def moneycontrol_find_stock_url(symbol: str):
+    """
+    Discover the Moneycontrol stock page URL using autosuggestion.
+    """
+    url = "https://www.moneycontrol.com/mccode/common/autosuggestion.php"
+    params = {
+        "query": symbol.upper(),
+        "type": "1",
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.moneycontrol.com/",
+    }
+
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        link = soup.select_one("ul.suglist li a")
+        if not link or not link.has_attr("href"):
+            return None
+
+        href = link["href"].strip()
+        if not href:
+            return None
+
+        if href.startswith("/"):
+            return f"https://www.moneycontrol.com{href}"
+
+        return href
+
+    except Exception:
+        return None
+
+
+def parse_moneycontrol_volume(html: str):
+    marker = '"volume":'
+    start = html.find(marker)
+    if start == -1:
+        return None
+
+    start = html.find("{", start + len(marker))
+    if start == -1:
+        return None
+
+    brace = 0
+    in_string = False
+    escape = False
+
+    for idx in range(start, len(html)):
+        ch = html[idx]
+        if ch == "\\" and not escape:
+            escape = True
+            continue
+
+        if ch == '"' and not escape:
+            in_string = not in_string
+
+        if not in_string:
+            if ch == "{":
+                brace += 1
+            elif ch == "}":
+                brace -= 1
+                if brace == 0:
+                    payload = html[start:idx + 1]
+                    try:
+                        return json.loads(payload)
+                    except json.JSONDecodeError:
+                        return None
+
+        escape = False
+
+    return None
+
+
+def parse_percent(text: str):
+    match = re.search(r"([0-9]+(?:\.[0-9]+)?)%", text)
+    if match:
+        return float(match.group(1))
+    match = re.search(r"([0-9]+(?:\.[0-9]+)?)", text)
+    if match:
+        return float(match.group(1))
+    return None
+
+
 def fetch_moneycontrol_delivery(symbol: str):
     """
-    Fetch delivery volume % from Moneycontrol.
-    Works reliably from Japan (no Cloudflare).
+    Fetch delivery volume % from Moneycontrol by parsing the stock page.
     """
-
-    mc_code = MONEYCONTROL_SYMBOL_MAP.get(symbol.upper())
-    if not mc_code:
-        return {"success": False, "error": "Symbol not mapped for Moneycontrol"}
-
-    url = f"https://www.moneycontrol.com/stocks/company_info/delivery_data.php?sc_id={mc_code}"
+    stock_url = moneycontrol_find_stock_url(symbol)
+    if not stock_url:
+        return {"success": False, "error": "Could not find Moneycontrol stock page"}
 
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.moneycontrol.com/",
     }
 
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(stock_url, headers=headers, timeout=10)
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        volume_data = parse_moneycontrol_volume(response.text)
+        if not volume_data or "Today" not in volume_data:
+            return {"success": False, "error": "Could not parse Moneycontrol volume data"}
 
-        # Moneycontrol delivery table rows
-        rows = soup.select("table tr")
+        today = volume_data["Today"]
+        delivery_qty = today.get("delivery")
+        total_volume = today.get("cvol")
+        delivery_pct = None
 
-        # Usually the first data row contains today's delivery stats
-        for row in rows:
-            cols = row.find_all("td")
-            if len(cols) >= 5:
-                # Columns typically:
-                # Date | Delivery Qty | Traded Qty | Delivery % | ...
-                delivery_qty = cols[1].text.strip().replace(",", "")
-                traded_qty = cols[2].text.strip().replace(",", "")
-                delivery_pct = cols[3].text.strip().replace("%", "")
+        for field in ("delivery_display_text", "delivery_tooltip_text"):
+            text = today.get(field)
+            if isinstance(text, str):
+                delivery_pct = parse_percent(text)
+                if delivery_pct is not None:
+                    break
 
-                return {
-                    "success": True,
-                    "delivery_pct": float(delivery_pct),
-                    "delivery_qty": int(delivery_qty),
-                    "total_volume": int(traded_qty)
-                }
+        if delivery_pct is None and delivery_qty is not None and total_volume:
+            try:
+                delivery_pct = round((delivery_qty / total_volume) * 100, 2)
+            except Exception:
+                delivery_pct = None
 
-        return {"success": False, "error": "Could not parse Moneycontrol delivery data"}
+        if delivery_qty is None or total_volume is None:
+            return {"success": False, "error": "Incomplete Moneycontrol delivery data"}
+
+        return {
+            "success": True,
+            "delivery_pct": delivery_pct,
+            "delivery_qty": delivery_qty,
+            "total_volume": total_volume,
+        }
 
     except Exception as e:
         return {"success": False, "error": str(e)}
-
 
 
 # ---------------------------------------------------------
