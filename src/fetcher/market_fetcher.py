@@ -134,6 +134,32 @@ def compute_macd(df, fast=12, slow=26, signal=9):
     return macd_line.iloc[-1], signal_line.iloc[-1], histogram.iloc[-1]
 
 
+def compute_adx(df, period=14):
+    high = df["High"]
+    low = df["Low"]
+    close = df["Close"]
+
+    # True Range
+    tr1 = high - low
+    tr2 = (high - close.shift(1)).abs()
+    tr3 = (low - close.shift(1)).abs()
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+    # Directional Movement
+    plus_dm = (high.diff().where(high.diff() > low.diff(), 0)).fillna(0)
+    minus_dm = (low.diff().where(low.diff() < high.diff(), 0)).abs().fillna(0)
+
+    # Smoothed values
+    atr = tr.rolling(period).mean()
+    plus_di = 100 * (plus_dm.rolling(period).mean() / atr)
+    minus_di = 100 * (minus_dm.rolling(period).mean() / atr)
+
+    dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
+    adx = dx.rolling(period).mean()
+
+    return adx.iloc[-1], plus_di.iloc[-1], minus_di.iloc[-1]
+
+
 
 # ---------------------------------------------------------
 # Combined Market Data Fetcher (NSE + BSE)
@@ -179,6 +205,12 @@ def fetch_indian_stock_data(user_input: str):
         macd_signal = safe_float(macd_signal)
         macd_hist = safe_float(macd_hist)
 
+        # ADX
+        adx_val, plus_di_val, minus_di_val = compute_adx(df)
+        adx_val = safe_float(adx_val)
+        plus_di_val = safe_float(plus_di_val)
+        minus_di_val = safe_float(minus_di_val)
+
         # Normalize
         current_price = safe_float(current_price)
         rsi = safe_float(rsi)
@@ -203,6 +235,9 @@ def fetch_indian_stock_data(user_input: str):
             "macd_line": macd_line,
             "macd_signal": macd_signal,
             "macd_histogram": macd_hist,
+            "adx": adx_val,
+            "plus_di": plus_di_val,
+            "minus_di": minus_di_val,
         }
 
     except Exception as e:
