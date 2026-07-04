@@ -1,6 +1,17 @@
 import yfinance as yf
 import pandas as pd
 import cloudscraper
+import requests
+from bs4 import BeautifulSoup
+
+# Moneycontrol mapping for delivery data
+MONEYCONTROL_SYMBOL_MAP = {
+    "RELIANCE": "RI",
+    "TCS": "TC",
+    "INFY": "IC",
+    "HDFCBANK": "HDF01",
+    # Add more as needed
+}
 
 # ---------------------------------------------------------
 # Ticker Normalization (NSE + BSE)
@@ -374,6 +385,55 @@ def fetch_nse_delivery_data(symbol: str):
         }
 
 
+def fetch_moneycontrol_delivery(symbol: str):
+    """
+    Fetch delivery volume % from Moneycontrol.
+    Works reliably from Japan (no Cloudflare).
+    """
+
+    mc_code = MONEYCONTROL_SYMBOL_MAP.get(symbol.upper())
+    if not mc_code:
+        return {"success": False, "error": "Symbol not mapped for Moneycontrol"}
+
+    url = f"https://www.moneycontrol.com/stocks/company_info/delivery_data.php?sc_id={mc_code}"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Moneycontrol delivery table rows
+        rows = soup.select("table tr")
+
+        # Usually the first data row contains today's delivery stats
+        for row in rows:
+            cols = row.find_all("td")
+            if len(cols) >= 5:
+                # Columns typically:
+                # Date | Delivery Qty | Traded Qty | Delivery % | ...
+                delivery_qty = cols[1].text.strip().replace(",", "")
+                traded_qty = cols[2].text.strip().replace(",", "")
+                delivery_pct = cols[3].text.strip().replace("%", "")
+
+                return {
+                    "success": True,
+                    "delivery_pct": float(delivery_pct),
+                    "delivery_qty": int(delivery_qty),
+                    "total_volume": int(traded_qty)
+                }
+
+        return {"success": False, "error": "Could not parse Moneycontrol delivery data"}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 
 # ---------------------------------------------------------
 # Combined Market Data Fetcher (NSE + BSE)
@@ -425,9 +485,9 @@ def fetch_indian_stock_data(user_input: str):
         plus_di_val = safe_float(plus_di_val)
         minus_di_val = safe_float(minus_di_val)
 
-        # Delivery Volume % (NSE India)
+        # Delivery Volume % (Moneycontrol)
         try:
-            delivery_data = fetch_nse_delivery_data(user_input)
+            delivery_data = fetch_moneycontrol_delivery(user_input)
             if delivery_data.get("success"):
                 delivery_pct = delivery_data.get("delivery_pct")
                 delivery_qty = delivery_data.get("delivery_qty")
