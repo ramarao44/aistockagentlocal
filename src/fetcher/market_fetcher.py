@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+import requests
 
 # ---------------------------------------------------------
 # Ticker Normalization (NSE + BSE)
@@ -324,6 +325,48 @@ def analyze_stock(ticker: str):
     }
 
 
+def fetch_nse_delivery_data(symbol: str):
+    """
+    Fetch delivery volume % from NSE India.
+    Uses official NSE JSON endpoint (unofficial access).
+    """
+
+    url = f"https://www.nseindia.com/api/quote-equity?symbol={symbol.upper()}"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "application/json",
+    }
+
+    try:
+        session = requests.Session()
+        response = session.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        # Extract delivery data
+        security_info = data.get("securityInfo", {})
+        trade_info = data.get("marketDeptOrderBook", {})
+
+        delivery_pct = security_info.get("deliveryToTradedQuantity", None)
+        delivery_qty = security_info.get("deliveryQuantity", None)
+        total_volume = trade_info.get("totalTradedVolume", None)
+
+        return {
+            "delivery_pct": delivery_pct,
+            "delivery_qty": delivery_qty,
+            "total_volume": total_volume,
+            "success": True
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 
 # ---------------------------------------------------------
 # Combined Market Data Fetcher (NSE + BSE)
@@ -375,6 +418,22 @@ def fetch_indian_stock_data(user_input: str):
         plus_di_val = safe_float(plus_di_val)
         minus_di_val = safe_float(minus_di_val)
 
+        # Delivery Volume % (NSE India)
+        try:
+            delivery_data = fetch_nse_delivery_data(user_input)
+            if delivery_data.get("success"):
+                delivery_pct = delivery_data.get("delivery_pct")
+                delivery_qty = delivery_data.get("delivery_qty")
+                total_volume = delivery_data.get("total_volume")
+            else:
+                delivery_pct = None
+                delivery_qty = None
+                total_volume = None
+        except Exception:
+            delivery_pct = None
+            delivery_qty = None
+            total_volume = None
+
         # Normalize
         current_price = safe_float(current_price)
         rsi = safe_float(rsi)
@@ -413,6 +472,9 @@ def fetch_indian_stock_data(user_input: str):
             "adx": adx_val,
             "plus_di": plus_di_val,
             "minus_di": minus_di_val,
+            "delivery_volume_pct": delivery_pct,
+            "delivery_volume_qty": delivery_qty,
+            "total_volume": total_volume,
             "trend_score": trend_score,
         }
 
