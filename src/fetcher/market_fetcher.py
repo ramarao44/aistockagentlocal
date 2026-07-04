@@ -218,6 +218,86 @@ def compute_trend_score(
     return score
 
 
+def generate_stock_report(data):
+    """
+    Generate a natural-language AI stock report based on computed indicators.
+    """
+
+    ticker = data.get("ticker", "Unknown")
+    price = data.get("current_price")
+    trend = data.get("supertrend_direction")
+    macd_line = data.get("macd_line")
+    macd_signal = data.get("macd_signal")
+    macd_hist = data.get("macd_histogram")
+    adx = data.get("adx")
+    plus_di = data.get("plus_di")
+    minus_di = data.get("minus_di")
+    rsi = data.get("rsi")
+    ma50 = data.get("ma50")
+    ma200 = data.get("ma200")
+    trend_score = data.get("trend_score")
+
+    # --- Trend Summary ---
+    if trend == "UP":
+        trend_text = "The SuperTrend indicator shows an upward trend."
+    else:
+        trend_text = "The SuperTrend indicator shows a downward trend."
+
+    # --- MACD Summary ---
+    if macd_hist > 0:
+        macd_text = "MACD momentum is positive, indicating bullish pressure."
+    else:
+        macd_text = "MACD momentum is negative, indicating bearish pressure."
+
+    # --- ADX Summary ---
+    if adx >= 25:
+        adx_text = "ADX suggests a strong trend."
+    elif adx <= 15:
+        adx_text = "ADX indicates a weak or fading trend."
+    else:
+        adx_text = "ADX shows a moderate trend strength."
+
+    # --- RSI Summary ---
+    if rsi < 30:
+        rsi_text = "RSI indicates the stock is oversold."
+    elif rsi > 70:
+        rsi_text = "RSI indicates the stock is overbought."
+    else:
+        rsi_text = "RSI is in a neutral zone."
+
+    # --- MA Summary ---
+    if ma50 and ma200:
+        if ma50 > ma200:
+            ma_text = "The 50-day MA is above the 200-day MA, indicating long-term bullish structure."
+        else:
+            ma_text = "The 50-day MA is below the 200-day MA, indicating long-term bearish structure."
+    else:
+        ma_text = "Insufficient data for MA trend analysis."
+
+    # --- Trend Score Summary ---
+    if trend_score >= 70:
+        score_text = "Overall trend score suggests a strong bullish outlook."
+    elif trend_score >= 40:
+        score_text = "Overall trend score suggests a neutral or mixed outlook."
+    else:
+        score_text = "Overall trend score suggests a bearish outlook."
+
+    # --- Final Report ---
+    report = (
+        f"📈 AI Stock Report for {ticker}\n"
+        f"Current Price: ₹{price:.2f}\n\n"
+        f"{trend_text}\n"
+        f"{macd_text}\n"
+        f"{adx_text}\n"
+        f"{rsi_text}\n"
+        f"{ma_text}\n\n"
+        f"🔎 Trend Score: {trend_score}/100\n"
+        f"{score_text}\n"
+    )
+
+    return report
+
+
 
 # ---------------------------------------------------------
 # Combined Market Data Fetcher (NSE + BSE)
