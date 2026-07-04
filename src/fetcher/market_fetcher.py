@@ -163,6 +163,61 @@ def compute_adx(df, period=14):
     return adx.iloc[-1], plus_di.iloc[-1], minus_di.iloc[-1]
 
 
+def compute_trend_score(
+    supertrend_dir,
+    macd_hist,
+    adx,
+    rsi,
+    ma50,
+    ma200,
+    current_price
+):
+    score = 50  # start neutral
+
+    # SuperTrend direction
+    if supertrend_dir == "UP":
+        score += 10
+    else:
+        score -= 10
+
+    # MACD momentum
+    if macd_hist > 0:
+        score += min(macd_hist * 2, 10)
+    else:
+        score += max(macd_hist * 2, -10)
+
+    # ADX strength
+    if adx >= 25:
+        score += 10
+    elif adx <= 15:
+        score -= 10
+
+    # RSI
+    if rsi < 30:
+        score += 10
+    elif rsi > 70:
+        score -= 10
+
+    # MA50 / MA200 trend
+    if ma50 is not None and ma200 is not None:
+        if ma50 > ma200:
+            score += 10
+        else:
+            score -= 10
+
+    # Price relative to MA50
+    if ma50 is not None:
+        if current_price > ma50:
+            score += 5
+        else:
+            score -= 5
+
+    # Clamp score between 0–100
+    score = max(0, min(100, score))
+
+    return score
+
+
 
 # ---------------------------------------------------------
 # Combined Market Data Fetcher (NSE + BSE)
@@ -222,6 +277,17 @@ def fetch_indian_stock_data(user_input: str):
         boll_upper = safe_float(boll_upper)
         boll_lower = safe_float(boll_lower)
 
+        # Trend Score
+        trend_score = compute_trend_score(
+            supertrend_dir,
+            macd_hist,
+            adx_val,
+            rsi,
+            ma50,
+            ma200,
+            current_price,
+        )
+
         return {
             "success": True,
             "ticker": tickers["nse"] if exchange == "NSE" else tickers["bse"],
@@ -241,6 +307,7 @@ def fetch_indian_stock_data(user_input: str):
             "adx": adx_val,
             "plus_di": plus_di_val,
             "minus_di": minus_di_val,
+            "trend_score": trend_score,
         }
 
     except Exception as e:
