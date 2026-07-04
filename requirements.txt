@@ -9,3 +9,4 @@ sqlite-utils
 pgvector
 sentence-transformers
 sqlalchemy
+apscheduler

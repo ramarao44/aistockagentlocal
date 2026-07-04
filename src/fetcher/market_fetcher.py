@@ -716,16 +716,27 @@ def fetch_indian_stock_data(user_input: str):
         boll_upper = safe_float(boll_upper)
         boll_lower = safe_float(boll_lower)
 
-        # Trend Score
-        trend_score = compute_trend_score(
-            supertrend_dir,
-            macd_hist,
-            adx_val,
-            rsi,
-            ma50,
-            ma200,
-            current_price,
-        )
+        # Delivery trend over the last 3 days
+        delivery_trend_pct = None
+        if delivery_pct is not None and total_volume is not None and len(df) >= 4:
+            recent_volumes = df["Volume"].iloc[-4:-1]
+            if recent_volumes.notna().all() and recent_volumes.mean() > 0:
+                delivery_trend_pct = round((delivery_pct - (recent_volumes.mean() / total_volume * 100)), 2)
+
+        # Trend Score 2.0
+        from src.analysis.trend_score import compute_trend_score
+
+        trend_score = compute_trend_score({
+            "delivery_volume_pct": delivery_pct,
+            "delivery_trend_pct": delivery_trend_pct,
+            "current_price": current_price,
+            "vwap": vwap,
+            "volume_breakout": bool(volume_breakout),
+            "supports": supports,
+            "resistances": resistances,
+            "pivot_points": pivot_points,
+            "df": df,
+        })
 
         record = save_daily_record({
             "symbol": user_input,

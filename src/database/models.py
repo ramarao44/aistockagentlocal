@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, String, DateTime, JSON
+from sqlalchemy import Column, Integer, Float, String, DateTime, JSON, Text
 from datetime import datetime
 from .engine import Base
 
@@ -27,3 +27,17 @@ class StockDaily(Base):
 
     trend_score = Column(Float)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+class AIReport(Base):
+    __tablename__ = "ai_report"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symbol = Column(String, index=True)
+
+    trend_score = Column(Float)
+    sentiment = Column(String)
+    summary = Column(Text)
+    recommendations = Column(Text)
+
+    snapshot_time = Column(DateTime, default=datetime.utcnow)
