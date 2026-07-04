@@ -1,16 +1,14 @@
 import requests
 import os
+from src.fetcher.market_fetcher import fetch_indian_stock_data
 
 # -----------------------------
 # CONFIGURATION
 # -----------------------------
 
-#LOCAL_MODEL = "phi4"
 LOCAL_MODEL = "llama3.2:3b"
-#LOCAL_MODEL = "phi3.5-mini"
 CLOUD_MODEL = "gpt-4o-mini"
 
-# Correct endpoint for phi4
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
 
@@ -31,7 +29,7 @@ def run_local_llama(prompt: str) -> str:
                 "prompt": prompt,
                 "stream": False
             },
-            timeout=60
+            timeout=120
         )
 
         print("DEBUG: Ollama POST returned status:", response.status_code)
@@ -85,19 +83,49 @@ def run_cloud_llm(prompt: str) -> str:
 def generate_llm_report(ticker: str, mode: str = "local") -> str:
     print("DEBUG: generate_llm_report called with mode =", mode)
 
-    prompt = (
-        f"You are an AI financial analyst. Generate a structured, concise stock analysis "
-        f"report for {ticker}. Include:\n"
-        "- Price trend summary\n"
-        "- Technical indicators\n"
-        "- Market sentiment\n"
-        "- Risks\n"
-        "- Opportunities\n"
-        "- Final recommendation\n"
-        "- Next steps\n\n"
-        "Keep the tone professional and analytical."
-    )
+    # ---------------------------------------------------------
+    # Fetch REAL Indian stock data (NSE + BSE)
+    # ---------------------------------------------------------
+    market_data = fetch_indian_stock_data(ticker)
 
+    if not market_data["success"]:
+        return f"Error fetching market data: {market_data['error']}"
+
+    print("DEBUG: Market data fetched:", market_data)
+
+    # ---------------------------------------------------------
+    # Build prompt using REAL data
+    # ---------------------------------------------------------
+    prompt = f"""
+You are an AI financial analyst specializing in Indian stock markets (NSE/BSE).
+Use ONLY the REAL market data provided below to generate the analysis.
+
+REAL MARKET DATA:
+- Ticker: {market_data['ticker']}
+- Exchange: {market_data['exchange']}
+- Current Price: {market_data['current_price']}
+- RSI (14): {market_data['rsi']}
+- MA50: {market_data['ma50']}
+- MA200: {market_data['ma200']}
+- Bollinger Upper: {market_data['bollinger_upper']}
+- Bollinger Lower: {market_data['bollinger_lower']}
+- Last Updated: {market_data['last_updated']}
+
+Generate a structured, concise Indian stock analysis report including:
+1. Price Trend Summary
+2. Technical Indicators Interpretation
+3. Market Sentiment (general)
+4. Risks (India-specific)
+5. Opportunities (India-specific)
+6. Final Recommendation (Buy/Hold/Sell)
+7. Next Steps for the Investor
+
+Keep the tone professional, analytical, and India‑focused.
+"""
+
+    # ---------------------------------------------------------
+    # Run LLM (local or cloud)
+    # ---------------------------------------------------------
     if mode == "cloud":
         print("DEBUG: Calling run_cloud_llm() now...")
         return run_cloud_llm(prompt)
@@ -105,6 +133,7 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
     print("DEBUG: Calling run_local_llama() now...")
     result = run_local_llama(prompt)
 
+    # Fallback to cloud if local fails
     if result.startswith("[Local LLM Error]") or result.startswith("[Local LLM Exception]"):
         return f"{result}\n\nFalling back to cloud...\n\n" + run_cloud_llm(prompt)
 
