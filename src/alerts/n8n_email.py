@@ -4,7 +4,7 @@ from src.logger import get_logger
 
 logger = get_logger("n8n_email")
 
-N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL") or "https://ramarao443.app.n8n.cloud/webhook-test/aistockagent-report"
 
 
 def send_report_to_n8n(payload: dict) -> bool:
