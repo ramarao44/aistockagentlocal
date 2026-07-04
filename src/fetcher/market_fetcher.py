@@ -121,6 +121,20 @@ def compute_supertrend(df, period=10, multiplier=3):
     return supertrend[-1], direction[-1]
 
 
+def compute_macd(df, fast=12, slow=26, signal=9):
+    close = df["Close"]
+
+    ema_fast = close.ewm(span=fast, adjust=False).mean()
+    ema_slow = close.ewm(span=slow, adjust=False).mean()
+
+    macd_line = ema_fast - ema_slow
+    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+    histogram = macd_line - signal_line
+
+    return macd_line.iloc[-1], signal_line.iloc[-1], histogram.iloc[-1]
+
+
+
 # ---------------------------------------------------------
 # Combined Market Data Fetcher (NSE + BSE)
 # ---------------------------------------------------------
@@ -159,6 +173,12 @@ def fetch_indian_stock_data(user_input: str):
         supertrend_value, supertrend_dir = compute_supertrend(df)
         supertrend_value = safe_float(supertrend_value)
 
+        # MACD
+        macd_line, macd_signal, macd_hist = compute_macd(df)
+        macd_line = safe_float(macd_line)
+        macd_signal = safe_float(macd_signal)
+        macd_hist = safe_float(macd_hist)
+
         # Normalize
         current_price = safe_float(current_price)
         rsi = safe_float(rsi)
@@ -180,6 +200,9 @@ def fetch_indian_stock_data(user_input: str):
             "supertrend": supertrend_value,
             "supertrend_direction": supertrend_dir,
             "last_updated": df.index[-1].strftime("%Y-%m-%d"),
+            "macd_line": macd_line,
+            "macd_signal": macd_signal,
+            "macd_histogram": macd_hist,
         }
 
     except Exception as e:
