@@ -6,6 +6,8 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 
+from src.database.crud import save_daily_record
+
 try:
     import cloudscraper
 except ImportError:
@@ -17,6 +19,18 @@ except ImportError:
 
 def normalize_ticker(user_input: str):
     base = user_input.strip().upper()
+    if base.endswith(".NS"):
+        base_name = base[:-3]
+        return {
+            "nse": base,
+            "bse": f"{base_name}.BO"
+        }
+    if base.endswith(".BO"):
+        base_name = base[:-3]
+        return {
+            "nse": f"{base_name}.NS",
+            "bse": base
+        }
     return {
         "nse": f"{base}.NS",
         "bse": f"{base}.BO"
@@ -98,6 +112,79 @@ def compute_atr(df, period=10):
     atr = tr.rolling(period).mean()
 
     return atr.iloc[-1]
+
+
+def calculate_vwap(df):
+    """
+    Compute VWAP from intraday OHLCV dataframe.
+    df must contain: High, Low, Close, Volume
+    """
+    if df is None or df.empty:
+        return None
+
+    tp = (df["High"] + df["Low"] + df["Close"]) / 3
+    vwap = (tp * df["Volume"]).sum() / df["Volume"].sum()
+
+    return float(vwap)
+
+
+def detect_volume_breakout(df):
+    """
+    Detect volume breakout using 20-day average volume.
+    Returns True/False.
+    """
+    if df is None or df.empty:
+        return None
+
+    if "Volume" not in df.columns:
+        return None
+
+    today_volume = df["Volume"].iloc[-1]
+    avg_20_volume = df["Volume"].tail(20).mean()
+    breakout = today_volume > (2 * avg_20_volume)
+
+    return bool(breakout)
+
+
+def find_support_resistance(df):
+    """
+    Detect swing highs (resistance) and swing lows (support).
+    Returns lists of levels.
+    """
+    supports = []
+    resistances = []
+
+    highs = df["High"].values
+    lows = df["Low"].values
+
+    for i in range(1, len(df) - 1):
+        if highs[i] > highs[i - 1] and highs[i] > highs[i + 1]:
+            resistances.append(float(highs[i]))
+
+        if lows[i] < lows[i - 1] and lows[i] < lows[i + 1]:
+            supports.append(float(lows[i]))
+
+    return supports[-5:], resistances[-5:]
+
+
+def calculate_pivot_points(df):
+    """
+    Classic pivot point calculation using last day's OHLC.
+    """
+    last = df.iloc[-1]
+    high = last["High"]
+    low = last["Low"]
+    close = last["Close"]
+
+    pivot = (high + low + close) / 3
+    r1 = (2 * pivot) - low
+    s1 = (2 * pivot) - high
+
+    return {
+        "pivot": float(pivot),
+        "r1": float(r1),
+        "s1": float(s1)
+    }
 
 
 def compute_supertrend(df, period=10, multiplier=3):
@@ -558,6 +645,30 @@ def fetch_indian_stock_data(user_input: str):
                 return float(val.iloc[-1])
             return float(val)
 
+        data_ticker = tickers["nse"] if exchange == "NSE" else tickers["bse"]
+        intraday = yf.download(
+            tickers=data_ticker,
+            interval="5m",
+            period="1d",
+            progress=False
+        )
+
+        if intraday is None or intraday.empty:
+            vwap = None
+        else:
+            if isinstance(intraday.columns, pd.MultiIndex):
+                try:
+                    intraday.columns = intraday.columns.get_level_values(0)
+                except Exception:
+                    intraday.columns = ["_".join(map(str, c)).strip() for c in intraday.columns]
+            intraday = intraday.dropna()
+            vwap = calculate_vwap(intraday)
+
+        volume_breakout = detect_volume_breakout(df)
+        today_volume = int(df["Volume"].iloc[-1]) if "Volume" in df.columns and not df["Volume"].isna().iloc[-1] else None
+        supports, resistances = find_support_resistance(df)
+        pivot_points = calculate_pivot_points(df)
+
         # Compute indicators
         rsi = compute_rsi(df)
         ma50 = compute_moving_average(df, 50)
@@ -616,6 +727,24 @@ def fetch_indian_stock_data(user_input: str):
             current_price,
         )
 
+        record = save_daily_record({
+            "symbol": user_input,
+            "open": float(df["Open"].iloc[-1]),
+            "high": float(df["High"].iloc[-1]),
+            "low": float(df["Low"].iloc[-1]),
+            "close": float(df["Close"].iloc[-1]),
+            "volume": int(df["Volume"].iloc[-1]) if "Volume" in df.columns and not df["Volume"].isna().iloc[-1] else None,
+            "delivery_pct": delivery_pct,
+            "delivery_qty": delivery_qty,
+            "total_volume": total_volume,
+            "vwap": vwap,
+            "volume_breakout": int(bool(volume_breakout)) if volume_breakout is not None else None,
+            "supports": supports,
+            "resistances": resistances,
+            "pivot_points": pivot_points,
+            "trend_score": trend_score,
+        })
+
         return {
             "success": True,
             "ticker": tickers["nse"] if exchange == "NSE" else tickers["bse"],
@@ -638,6 +767,12 @@ def fetch_indian_stock_data(user_input: str):
             "delivery_volume_pct": delivery_pct,
             "delivery_volume_qty": delivery_qty,
             "total_volume": total_volume,
+            "today_volume": today_volume,
+            "vwap": vwap,
+            "volume_breakout": volume_breakout,
+            "supports": supports,
+            "resistances": resistances,
+            "pivot_points": pivot_points,
             "trend_score": trend_score,
         }
 

@@ -8,3 +8,4 @@ chainlit
 sqlite-utils
 pgvector
 sentence-transformers
+sqlalchemy
