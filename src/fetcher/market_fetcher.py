@@ -146,10 +146,13 @@ def compute_adx(df, period=14):
     tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
 
     # Directional Movement
-    plus_dm = (high.diff().where(high.diff() > low.diff(), 0)).fillna(0)
-    minus_dm = (low.diff().where(low.diff() < high.diff(), 0)).abs().fillna(0)
+    up_move = high.diff()
+    down_move = low.diff() * -1
 
-    # Smoothed values
+    plus_dm = up_move.where((up_move > down_move) & (up_move > 0), 0)
+    minus_dm = down_move.where((down_move > up_move) & (down_move > 0), 0)
+
+    # Smoothed ATR and DM
     atr = tr.rolling(period).mean()
     plus_di = 100 * (plus_dm.rolling(period).mean() / atr)
     minus_di = 100 * (minus_dm.rolling(period).mean() / atr)
