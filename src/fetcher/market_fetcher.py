@@ -1,6 +1,6 @@
 import yfinance as yf
 import pandas as pd
-import requests
+import cloudscraper
 
 # ---------------------------------------------------------
 # Ticker Normalization (NSE + BSE)
@@ -327,37 +327,44 @@ def analyze_stock(ticker: str):
 
 def fetch_nse_delivery_data(symbol: str):
     """
-    Fetch delivery volume % from NSE India.
-    Uses official NSE JSON endpoint (unofficial access).
+    Fetch delivery volume % from NSE India using cloudscraper.
+    This bypasses Cloudflare and returns real delivery data.
     """
 
     url = f"https://www.nseindia.com/api/quote-equity?symbol={symbol.upper()}"
 
+    scraper = cloudscraper.create_scraper(
+        browser={
+            "browser": "chrome",
+            "platform": "windows",
+            "mobile": False
+        }
+    )
+
     headers = {
         "User-Agent": "Mozilla/5.0",
-        "Accept-Language": "en-US,en;q=0.9",
         "Accept": "application/json",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.nseindia.com/",
     }
 
     try:
-        session = requests.Session()
-        response = session.get(url, headers=headers, timeout=10)
+        response = scraper.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         data = response.json()
 
-        # Extract delivery data
         security_info = data.get("securityInfo", {})
-        trade_info = data.get("marketDeptOrderBook", {})
+        market_info = data.get("marketDeptOrderBook", {})
 
-        delivery_pct = security_info.get("deliveryToTradedQuantity", None)
-        delivery_qty = security_info.get("deliveryQuantity", None)
-        total_volume = trade_info.get("totalTradedVolume", None)
+        delivery_pct = security_info.get("deliveryToTradedQuantity")
+        delivery_qty = security_info.get("deliveryQuantity")
+        total_volume = market_info.get("totalTradedVolume")
 
         return {
+            "success": True,
             "delivery_pct": delivery_pct,
             "delivery_qty": delivery_qty,
-            "total_volume": total_volume,
-            "success": True
+            "total_volume": total_volume
         }
 
     except Exception as e:
