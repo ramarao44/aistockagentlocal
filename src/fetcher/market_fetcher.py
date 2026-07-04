@@ -22,7 +22,19 @@ def fetch_price_history(ticker: str, period="6mo", interval="1d"):
         df = yf.download(ticker, period=period, interval=interval, progress=False)
         if df is None or df.empty:
             return None
-        return df.dropna()
+        df = df.dropna()
+
+        # yfinance may return a DataFrame with MultiIndex columns when a ticker
+        # includes the symbol as the second level (e.g. ('Close', 'RELIANCE.NS')).
+        # Normalize to single-level columns like 'Close', 'High', etc.
+        if isinstance(df.columns, pd.MultiIndex):
+            try:
+                df.columns = df.columns.get_level_values(0)
+            except Exception:
+                # Fallback: convert to single-level by joining names
+                df.columns = ["_".join(map(str, c)).strip() for c in df.columns]
+
+        return df
     except Exception as e:
         print(f"[MarketFetcher] Error fetching data for {ticker}: {e}")
         return None
@@ -41,7 +53,6 @@ def compute_rsi(df, period=14):
     avg_gain = gain.rolling(period).mean()
     avg_loss = loss.rolling(period).mean()
 
-    # Prevent division by zero
     avg_loss = avg_loss.replace(0, 1e-10)
 
     rs = avg_gain / avg_loss
@@ -50,12 +61,10 @@ def compute_rsi(df, period=14):
     return rsi.iloc[-1]
 
 
-
 def compute_moving_average(df, window=50):
     if len(df) < window:
         return None
     return df["Close"].rolling(window).mean().iloc[-1]
-
 
 
 def compute_bollinger_bands(df, window=20):
@@ -66,6 +75,52 @@ def compute_bollinger_bands(df, window=20):
     return upper.iloc[-1], lower.iloc[-1]
 
 
+def compute_atr(df, period=10):
+    high = df["High"]
+    low = df["Low"]
+    close = df["Close"]
+
+    tr1 = high - low
+    tr2 = (high - close.shift(1)).abs()
+    tr3 = (low - close.shift(1)).abs()
+
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    atr = tr.rolling(period).mean()
+
+    return atr.iloc[-1]
+
+
+def compute_supertrend(df, period=10, multiplier=3):
+    atr = compute_atr(df, period)
+    hl2 = (df["High"] + df["Low"]) / 2
+
+    upper_band = hl2 + (multiplier * atr)
+    lower_band = hl2 - (multiplier * atr)
+
+    supertrend = []
+    direction = []
+
+    for i in range(len(df)):
+        if i == 0:
+            supertrend.append(upper_band.iloc[i])
+            direction.append("DOWN")
+        else:
+            if df["Close"].iloc[i] > upper_band.iloc[i-1]:
+                direction.append("UP")
+                supertrend.append(lower_band.iloc[i])
+            elif df["Close"].iloc[i] < lower_band.iloc[i-1]:
+                direction.append("DOWN")
+                supertrend.append(upper_band.iloc[i])
+            else:
+                direction.append(direction[i-1])
+                if direction[i] == "UP":
+                    supertrend.append(lower_band.iloc[i])
+                else:
+                    supertrend.append(upper_band.iloc[i])
+
+    return supertrend[-1], direction[-1]
+
+
 # ---------------------------------------------------------
 # Combined Market Data Fetcher (NSE + BSE)
 # ---------------------------------------------------------
@@ -73,11 +128,9 @@ def compute_bollinger_bands(df, window=20):
 def fetch_indian_stock_data(user_input: str):
     tickers = normalize_ticker(user_input)
 
-    # Try NSE first
     df = fetch_price_history(tickers["nse"])
     exchange = "NSE"
 
-    # Fallback to BSE
     if df is None:
         df = fetch_price_history(tickers["bse"])
         exchange = "BSE"
@@ -89,21 +142,24 @@ def fetch_indian_stock_data(user_input: str):
         }
 
     try:
-        # Compute raw indicators
+        # safe_float MUST be defined before usage
+        def safe_float(val):
+            if isinstance(val, pd.Series):
+                return float(val.iloc[-1])
+            return float(val)
+
+        # Compute indicators
         rsi = compute_rsi(df)
         ma50 = compute_moving_average(df, 50)
         ma200 = compute_moving_average(df, 200)
         boll_upper, boll_lower = compute_bollinger_bands(df)
         current_price = df["Close"].iloc[-1]
 
-        # ---------------------------------------------------------
-        # Normalize values (convert Series → float safely)
-        # ---------------------------------------------------------
-        def safe_float(val):
-            if isinstance(val, pd.Series):
-                return float(val.iloc[-1])
-            return float(val)
+        # SuperTrend
+        supertrend_value, supertrend_dir = compute_supertrend(df)
+        supertrend_value = safe_float(supertrend_value)
 
+        # Normalize
         current_price = safe_float(current_price)
         rsi = safe_float(rsi)
         ma50 = safe_float(ma50)
@@ -111,9 +167,6 @@ def fetch_indian_stock_data(user_input: str):
         boll_upper = safe_float(boll_upper)
         boll_lower = safe_float(boll_lower)
 
-        # ---------------------------------------------------------
-        # Return clean structured output
-        # ---------------------------------------------------------
         return {
             "success": True,
             "ticker": tickers["nse"] if exchange == "NSE" else tickers["bse"],
@@ -124,6 +177,8 @@ def fetch_indian_stock_data(user_input: str):
             "ma200": ma200,
             "bollinger_upper": boll_upper,
             "bollinger_lower": boll_lower,
+            "supertrend": supertrend_value,
+            "supertrend_direction": supertrend_dir,
             "last_updated": df.index[-1].strftime("%Y-%m-%d"),
         }
 
