@@ -298,6 +298,32 @@ def generate_stock_report(data):
     return report
 
 
+def analyze_stock(ticker: str):
+    """
+    Unified wrapper for MVP.
+    Returns:
+      - raw indicator data (JSON)
+      - natural-language AI stock report
+    """
+    data = fetch_indian_stock_data(ticker)
+
+    # If fetch failed, return error
+    if not data.get("success", False):
+        return {
+            "success": False,
+            "error": data.get("error", "Unknown error"),
+            "report": f"Could not generate report for {ticker}."
+        }
+
+    report = generate_stock_report(data)
+
+    return {
+        "success": True,
+        "data": data,
+        "report": report
+    }
+
+
 
 # ---------------------------------------------------------
 # Combined Market Data Fetcher (NSE + BSE)
