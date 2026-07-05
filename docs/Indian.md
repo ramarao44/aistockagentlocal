@@ -639,4 +639,4 @@ If you want to continue, just tell me:
 Proceed with Trend Score 2.0
 
 
-webhook : https://ramarao443.app.n8n.cloud/webhook-test/aistockagent-report
+webhook : https://ramarao443.app.n8n.cloud/webhook/aistockagent-report
