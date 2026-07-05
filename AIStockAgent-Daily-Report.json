@@ -1,0 +1,79 @@
+{
+  "name": "AIStockAgent Daily Report",
+  "active": true,
+  "nodes": [
+    {
+      "id": "webhook-node",
+      "name": "Receive Report",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [300, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aistockagent-report",
+        "responseMode": "onReceived",
+        "options": {
+          "rawBody": false,
+          "responseData": "json",
+          "alwaysOutputData": true
+        }
+      }
+    },
+    {
+      "id": "function-node",
+      "name": "Format HTML Report",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [600, 300],
+      "parameters": {
+        "functionCode": "const d = $json;\n\nconst supports = (d.supports || []).join(', ');\nconst resistances = (d.resistances || []).join(', ');\nconst pivots = (d.pivot_points || []).join(', ');\nconst alerts = (d.alerts || []).join('<br>');\n\nconst html = `\n<h2>AIStockAgent Daily Report</h2>\n<b>Symbol:</b> ${d.symbol}<br>\n<b>Trend Score:</b> ${d.trend_score}<br>\n<b>Trend Direction:</b> ${d.trend_direction}<br>\n<b>Delivery %:</b> ${d.delivery_pct}<br>\n<b>VWAP:</b> ${d.vwap}<br>\n<b>Breakout:</b> ${d.breakout}<br><br>\n\n<b>Supports:</b> ${supports}<br>\n<b>Resistances:</b> ${resistances}<br>\n<b>Pivot Points:</b> ${pivots}<br><br>\n\n<b>AI Summary:</b><br>${d.ai_summary}<br><br>\n<b>AI Recommendations:</b><br>${d.ai_recommendations}<br><br>\n<b>Sentiment:</b> ${d.sentiment}<br><br>\n\n<b>Alerts:</b><br>${alerts}\n`;\n\nreturn [{ html }];"
+      }
+    },
+    {
+      "id": "gmail-node",
+      "name": "Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "to": "ramarao.mundruai@gmail.com",
+        "subject": "Daily AIStockAgent Report - {{$json.symbol}}",
+        "message": "={{$json[\"html\"]}}",
+        "options": {
+          "sendAsHtml": true
+        }
+      },
+      "credentials": {
+        "gmailOAuth2Api": {
+          "id": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Receive Report": {
+      "main": [
+        [
+          {
+            "node": "Format HTML Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format HTML Report": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

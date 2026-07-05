@@ -10,3 +10,6 @@ pgvector
 sentence-transformers
 sqlalchemy
 apscheduler
+fastapi
+uvicorn
+python-dotenv
