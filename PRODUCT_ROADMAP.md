@@ -22,6 +22,7 @@ Build a comprehensive, local-first AI stock analysis platform for Indian markets
 | ⏳ PENDING | Phase 5 | Model Selector |
 | ⏳ PENDING | Phase 6 | Streaming Output |
 | ⏳ PENDING | Phase 7 | Enhanced Data Sources |
+| ⏳ PENDING | Phase 8 | Fundamental Analysis |
 
 ---
 
@@ -125,6 +126,31 @@ Build a comprehensive, local-first AI stock analysis platform for Indian markets
 
 ---
 
+## ⏳ Phase 8 - Fundamental Analysis (PENDING)
+
+### Features
+| Feature | Status | Priority |
+|---------|--------|----------|
+| Financial statements fetching | ⏳ TODO | High |
+| P/E ratio analysis | ⏳ TODO | High |
+| P/B ratio analysis | ⏳ TODO | Medium |
+| Debt-to-equity ratio | ⏳ TODO | Medium |
+| ROE/ROCE calculations | ⏳ TODO | High |
+| Revenue/Profit growth analysis | ⏳ TODO | High |
+| Earnings calendar integration | ⏳ TODO | Medium |
+| Fundamental score algorithm | ⏳ TODO | High |
+| Fundamental + Technical combined report | ⏳ TODO | High |
+
+### Fundamental Metrics to Implement
+- **Valuation Ratios:** P/E, P/B, PEG, EV/EBITDA
+- **Profitability:** ROE, ROCE, ROA, Net Margin
+- **Growth:** Revenue growth, EPS growth, 3-year CAGR
+- **Financial Health:** Debt/Equity, Current Ratio, Interest Coverage
+- **Efficiency:** Asset Turnover, Inventory Turnover
+- **Dividend:** Dividend Yield, Payout Ratio
+
+---
+
 ## 📈 Future Enhancements (BACKLOG)
 
 ### Advanced Features
@@ -171,6 +197,7 @@ Build a comprehensive, local-first AI stock analysis platform for Indian markets
 | Phase 5 | 2026-08-30 | Pending |
 | Phase 6 | 2026-09-15 | Pending |
 | Phase 7 | 2026-09-30 | Pending |
+| Phase 8 | 2026-10-15 | Pending |
 
 ---
 
@@ -178,7 +205,7 @@ Build a comprehensive, local-first AI stock analysis platform for Indian markets
 
 | Date | Version | Changes |
 |------|---------|---------|
-| 2026-07-07 | 1.0 | Initial roadmap creation |
+| 2026-07-07 | 1.0 | Initial roadmap creation + Fundamental Analysis phase |
 
 ---
 
