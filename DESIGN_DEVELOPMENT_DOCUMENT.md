@@ -19,6 +19,9 @@
 
 ---
 
+## 📝 Change Log
+- 2026-07-07: Added defensive handling for empty/partial market data in the fetcher, made cloud LLM imports fail gracefully, and added an environment-based configuration example for local setup.
+
 ## 🎯 Project Overview
 
 ### Purpose

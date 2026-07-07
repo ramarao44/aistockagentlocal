@@ -148,6 +148,13 @@ if mode == "local":
 
 ---
 
+### 4. Environment-Based Configuration for LLMs
+**Problem:** Hard-coded LLM settings made local setup less predictable across machines.
+
+**Solution:** Use environment variables for the local model, cloud model, and Ollama endpoint, with a sample `.env.example` file for quick onboarding.
+
+**Key Takeaway:** Keep runtime configuration in environment variables so the same codebase can run consistently across different local setups.
+
 ## 🏗️ Architecture Decisions
 
 ### 1. Deterministic vs LLM Separation

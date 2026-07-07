@@ -514,7 +514,11 @@ def moneycontrol_find_stock_url(symbol: str):
         if not link or not link.has_attr("href"):
             return None
 
-        href = link["href"].strip()
+        href = link.get("href")
+        if not isinstance(href, str):
+            return None
+
+        href = href.strip()
         if not href:
             return None
 
@@ -666,6 +670,9 @@ def fetch_indian_stock_data(user_input: str):
             progress=False
         )
 
+        if intraday is None:
+            intraday = pd.DataFrame()
+
         if intraday is None or intraday.empty:
             vwap = None
         else:
@@ -678,32 +685,58 @@ def fetch_indian_stock_data(user_input: str):
             vwap = calculate_vwap(intraday)
 
         volume_breakout = detect_volume_breakout(df)
-        today_volume = int(df["Volume"].iloc[-1]) if "Volume" in df.columns and not df["Volume"].isna().iloc[-1] else None
-        supports, resistances = find_support_resistance(df)
-        pivot_points = calculate_pivot_points(df)
+        today_volume = None
+        if "Volume" in df.columns and not df.empty:
+            last_volume = df["Volume"].iloc[-1]
+            if pd.notna(last_volume):
+                today_volume = int(last_volume)
 
-        # Compute indicators
-        rsi = compute_rsi(df)
-        ma50 = compute_moving_average(df, 50)
-        ma200 = compute_moving_average(df, 200)
-        boll_upper, boll_lower = compute_bollinger_bands(df)
-        current_price = df["Close"].iloc[-1]
+        if df.empty:
+            supports, resistances = [], []
+            pivot_points = {"pivot": None, "r1": None, "s1": None}
+            rsi = None
+            ma50 = None
+            ma200 = None
+            boll_upper, boll_lower = None, None
+            current_price = None
+            supertrend_value, supertrend_dir = None, "DOWN"
+            macd_line, macd_signal, macd_hist = None, None, None
+            adx_val, plus_di_val, minus_di_val = None, None, None
+        else:
+            supports, resistances = find_support_resistance(df)
+            pivot_points = calculate_pivot_points(df)
 
-        # SuperTrend
-        supertrend_value, supertrend_dir = compute_supertrend(df)
-        supertrend_value = safe_float(supertrend_value)
+            # Compute indicators
+            rsi = compute_rsi(df)
+            ma50 = compute_moving_average(df, 50)
+            ma200 = compute_moving_average(df, 200)
+            boll_upper, boll_lower = compute_bollinger_bands(df)
+            current_price = df["Close"].iloc[-1]
 
-        # MACD
-        macd_line, macd_signal, macd_hist = compute_macd(df)
-        macd_line = safe_float(macd_line)
-        macd_signal = safe_float(macd_signal)
-        macd_hist = safe_float(macd_hist)
+            # SuperTrend
+            supertrend_value, supertrend_dir = compute_supertrend(df)
 
-        # ADX
-        adx_val, plus_di_val, minus_di_val = compute_adx(df)
-        adx_val = safe_float(adx_val)
-        plus_di_val = safe_float(plus_di_val)
-        minus_di_val = safe_float(minus_di_val)
+            # MACD
+            macd_line, macd_signal, macd_hist = compute_macd(df)
+
+            # ADX
+            adx_val, plus_di_val, minus_di_val = compute_adx(df)
+
+        if current_price is not None:
+            current_price = safe_float(current_price)
+        else:
+            current_price = None
+
+        if rsi is not None:
+            rsi = safe_float(rsi)
+        if ma50 is not None:
+            ma50 = safe_float(ma50)
+        if ma200 is not None:
+            ma200 = None if pd.isna(ma200) else safe_float(ma200)
+        if boll_upper is not None:
+            boll_upper = safe_float(boll_upper)
+        if boll_lower is not None:
+            boll_lower = safe_float(boll_lower)
 
         # Delivery Volume % (Moneycontrol)
         try:
@@ -720,14 +753,6 @@ def fetch_indian_stock_data(user_input: str):
             delivery_pct = None
             delivery_qty = None
             total_volume = None
-
-        # Normalize
-        current_price = safe_float(current_price)
-        rsi = safe_float(rsi)
-        ma50 = safe_float(ma50)
-        ma200 = None if pd.isna(ma200) else safe_float(ma200)
-        boll_upper = safe_float(boll_upper)
-        boll_lower = safe_float(boll_lower)
 
         # Delivery trend over the last 3 days
         delivery_trend_pct = None
@@ -751,23 +776,26 @@ def fetch_indian_stock_data(user_input: str):
             "df": df,
         })
 
-        record = save_daily_record({
-            "symbol": user_input,
-            "open": float(df["Open"].iloc[-1]),
-            "high": float(df["High"].iloc[-1]),
-            "low": float(df["Low"].iloc[-1]),
-            "close": float(df["Close"].iloc[-1]),
-            "volume": int(df["Volume"].iloc[-1]) if "Volume" in df.columns and not df["Volume"].isna().iloc[-1] else None,
-            "delivery_pct": delivery_pct,
-            "delivery_qty": delivery_qty,
-            "total_volume": total_volume,
-            "vwap": vwap,
-            "volume_breakout": int(bool(volume_breakout)) if volume_breakout is not None else None,
-            "supports": supports,
-            "resistances": resistances,
-            "pivot_points": pivot_points,
-            "trend_score": trend_score,
-        })
+        if not df.empty:
+            record = save_daily_record({
+                "symbol": user_input,
+                "open": float(df["Open"].iloc[-1]),
+                "high": float(df["High"].iloc[-1]),
+                "low": float(df["Low"].iloc[-1]),
+                "close": float(df["Close"].iloc[-1]),
+                "volume": int(df["Volume"].iloc[-1]) if "Volume" in df.columns and not df["Volume"].isna().iloc[-1] else None,
+                "delivery_pct": delivery_pct,
+                "delivery_qty": delivery_qty,
+                "total_volume": total_volume,
+                "vwap": vwap,
+                "volume_breakout": int(bool(volume_breakout)) if volume_breakout is not None else None,
+                "supports": supports,
+                "resistances": resistances,
+                "pivot_points": pivot_points,
+                "trend_score": trend_score,
+            })
+        else:
+            record = None
 
         return {
             "success": True,

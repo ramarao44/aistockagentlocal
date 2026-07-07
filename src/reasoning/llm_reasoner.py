@@ -9,8 +9,10 @@ Version: 1.0
 Last Updated: 2026-07-07
 """
 
-import requests
 import os
+
+import requests
+
 from src.fetcher.market_fetcher import fetch_indian_stock_data
 
 # ============================================================================
@@ -21,10 +23,10 @@ from src.fetcher.market_fetcher import fetch_indian_stock_data
 # CLOUD_MODEL: Used for cloud inference via OpenAI (requires API key)
 # OLLAMA_URL: Local Ollama API endpoint (default: localhost:11434)
 
-LOCAL_MODEL = "llama3.2:3b"  # 2.0GB model, fast on CPU
-CLOUD_MODEL = "gpt-4o-mini"   # Cloud fallback model
+LOCAL_MODEL = os.getenv("LOCAL_MODEL", "llama3.2:3b")  # 2.0GB model, fast on CPU
+CLOUD_MODEL = os.getenv("CLOUD_MODEL", "gpt-4o-mini")   # Cloud fallback model
 
-OLLAMA_URL = "http://localhost:11434/api/generate"  # Use /api/generate for compatibility
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")  # Use /api/generate for compatibility
 
 
 # ============================================================================
@@ -94,6 +96,7 @@ def run_cloud_llm(prompt: str) -> str:
 
     try:
         import openai
+
         openai.api_key = api_key
 
         completion = openai.ChatCompletion.create(
@@ -103,6 +106,8 @@ def run_cloud_llm(prompt: str) -> str:
 
         return completion.choices[0].message["content"]
 
+    except ImportError:
+        return "[Cloud LLM Error] openai package is not installed"
     except Exception as e:
         return f"[Cloud LLM Exception] {str(e)}"
 
