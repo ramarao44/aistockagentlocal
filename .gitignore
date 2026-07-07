@@ -28,9 +28,5 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Test reports (keep only latest)
-TEST_REPORT.md
-TEST_REPORT_*.md
-
-# Reports
-reports/
+# Note: Test reports and documentation are tracked in git
+# Only .log files in logs/ are ignored (runtime logs)
