@@ -1,8 +1,28 @@
 # AI Assistant Instructions for AI Stock Agent Project
 
-**Version:** 1.0
-**Last Updated:** 2026-07-07
+**Version:** 1.1
+**Last Updated:** 2026-07-08
 **Purpose:** Guidelines for AI models working on this project
+
+---
+
+## 🔐 REPO SAFETY - READ THIS FIRST
+
+**CRITICAL:** Before any push, you MUST follow [PUSH_CHECKLIST.md](../PUSH_CHECKLIST.md) in the repo root.
+
+### Git Hooks Protect Against:
+- ❌ Pushing without test results
+- ❌ Accidentally committing `.env` file  
+- ❌ Pushing files larger than 10MB
+
+### Your Responsibility:
+1. **Always** run all tests before committing
+2. **Always** update `reports/TEST_REPORT.md`
+3. **Always** add change log entry to design document
+4. **Always** update lessons learned if new patterns discovered
+5. **Never** skip the 10-point pre-push validation
+
+**This is not optional. It protects the repo.**
 
 ---
 

@@ -280,7 +280,48 @@ def run_local_llama(prompt: str) -> str:
 **Interview Angle:** This shows understanding of process discipline, self-correction, and the importance of quality assurance in team environments.
 
 ---
+### Automated Safety Layers (Git Hooks & Checklists)
+**Problem:** Even with clear procedures, humans (and AI agents) can forget to follow checklists, leading to:
+- Pushing without running tests
+- Committing .env files with secrets
+- Uploading large binaries accidentally
+- Documentation getting out of sync
 
+**Solution Implemented:**
+1. **Git Pre-Push Hook** (.githooks/pre-push) - Automatically blocks bad pushes
+   - Checks that TEST_REPORT.md exists
+   - Prevents .env file commits
+   - Blocks files larger than 10MB
+2. **Visible Checklist** (PUSH_CHECKLIST.md) - Root directory for maximum visibility
+   - 10-point validation checklist
+   - Required before every push
+   - Easy to see and reference
+3. **Automated Enforcement** - Combination of manual discipline + technical barriers
+   - Git hook stops bad pushes technically
+   - Checklist enforces manual discipline
+   - AI_INSTRUCTIONS.md educates on why
+
+**Code Example:**
+```powershell
+# Git hook checks test report exists
+if (! Test-Path "reports/TEST_REPORT.md") {
+    Write-Host "❌ FAIL: reports/TEST_REPORT.md not found" -ForegroundColor Red
+    exit 1  # Block the push
+}
+
+# Prevents .env commits
+$staged = git diff --cached --name-only
+if ($staged -contains ".env") {
+    Write-Host "❌ FAIL: .env file is staged!" -ForegroundColor Red
+    exit 1  # Block the push
+}
+```
+
+**Key Takeaway:** Never rely on humans to follow procedures perfectly. Use automated technical barriers (git hooks) combined with visible documentation (checklists) to make good practices the path of least resistance.
+
+**Interview Angle:** Shows understanding of DevOps principles, automation, and designing systems that prevent errors rather than just catching them after the fact.
+
+---
 ## �📝 Interview Talking Points
 
 ### Technical Challenges

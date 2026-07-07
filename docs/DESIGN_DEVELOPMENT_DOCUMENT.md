@@ -20,6 +20,7 @@
 ---
 
 ## 📝 Change Log
+- 2026-07-08: Added repo safety layers - created PUSH_CHECKLIST.md and .githooks/pre-push for automated validation. Protects against pushing without tests, accidental .env commits, and large files. Ensures all AI agents follow discipline before pushing.
 - 2026-07-08: Added pre-push validation checklist to AI_INSTRUCTIONS.md and standardized change log format for consistency - ensures traceability and continuity across AI sessions. Organized test reports in dedicated reports/ folder for better project organization.
 - 2026-07-07: Added defensive handling for empty/partial market data in the fetcher, made cloud LLM imports fail gracefully, and added an environment-based configuration example for local setup.
 
