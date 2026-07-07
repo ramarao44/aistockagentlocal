@@ -1,7 +1,7 @@
 # Lessons Learned - AI Stock Agent Project
 
 **Version:** 1.0
-**Last Updated:** 2026-07-07
+**Last Updated:** 2026-07-08
 **Purpose:** Document technical challenges, solutions, and best practices for future reference and interview preparation
 
 ---
@@ -261,7 +261,27 @@ def run_local_llama(prompt: str) -> str:
 
 ---
 
-## 📝 Interview Talking Points
+## � Development Process & Validation
+
+### Validation Checklist Discipline (Meta-Lesson)
+**Problem:** When creating/updating documentation procedures, it's easy to forget to follow them for the same changes.
+
+**Scenario:** Created a comprehensive pre-push validation checklist in AI_INSTRUCTIONS.md, then immediately pushed code changes without running tests or updating documentation.
+
+**Solution Implemented:**
+1. Always run the full test suite BEFORE committing: `test_mvp`, `test_db`, `test_llm_reasoning`
+2. Update test reports with latest results
+3. Update DESIGN_DEVELOPMENT_DOCUMENT.md change log with every commit
+4. Complete pre-push validation checklist (10-point review)
+5. Never skip documentation updates for "small" changes
+
+**Key Takeaway:** The procedures you create for others apply to you too. Validation checklists exist because skipping them causes problems. Practice what you document.
+
+**Interview Angle:** This shows understanding of process discipline, self-correction, and the importance of quality assurance in team environments.
+
+---
+
+## �📝 Interview Talking Points
 
 ### Technical Challenges
 1. **MultiIndex handling** - Real-world data normalization
