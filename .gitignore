@@ -1,24 +1,36 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
 
 # Virtual environment
 .venv/
+env/
+venv/
 
 # IDE
 .vscode/
+.idea/
 
 # Chainlit
 .chainlit/
 
-# Data
-data/
+# Data files (local database)
 *.db
+*.sqlite
+*.sqlite3
+
+# Logs
 logs/
+*.log
 
 # OS files
 .DS_Store
 Thumbs.db
 
+# Test reports (keep only latest)
+TEST_REPORT.md
+TEST_REPORT_*.md
 
-https://github.com/ramarao44/aistockagentlocal
+# Reports
+reports/

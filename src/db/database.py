@@ -1,7 +1,19 @@
+"""
+SQLite Database Module - AI Stock Agent
+
+Handles SQLite database operations for market data, indicators, and news.
+Database file is stored in the data/ directory.
+
+Author: AI Stock Agent Team
+Version: 1.0
+Last Updated: 2026-07-08
+"""
+
 import sqlite3
 from pathlib import Path
 import pandas as pd
 
+# Database path: data/agent.db (relative to project root)
 DB_PATH = Path("data/agent.db")
 
 def get_connection():
@@ -131,21 +143,6 @@ def load_latest_indicators(ticker: str):
         )
     return df.iloc[0] if not df.empty else None
 
-def load_indicators(ticker: str):
-    with get_connection() as conn:
-        df = pd.read_sql_query(
-            """
-            SELECT date, rsi, macd, macd_signal, macd_hist, ma20, ma50
-            FROM technical_indicators
-            WHERE ticker = ?
-            ORDER BY date ASC
-            """,
-            conn,
-            params=(ticker,),
-            parse_dates=["date"]
-        )
-    return df
-
 
 def save_news(news_items):
     records = []
@@ -195,20 +192,6 @@ def load_news(ticker: str):
             conn,
             params=(ticker,),
             parse_dates=["published_at"]
-        )
-    return df
-
-def load_sentiment(ticker: str):
-    with get_connection() as conn:
-        df = pd.read_sql_query(
-            """
-            SELECT title, sentiment
-            FROM sentiment
-            WHERE ticker = ?
-            ORDER BY sentiment DESC
-            """,
-            conn,
-            params=(ticker,)
         )
     return df
 
