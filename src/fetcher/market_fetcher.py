@@ -1,3 +1,15 @@
+"""
+Market Fetcher Module - AI Stock Agent
+
+This module handles fetching market data from various sources for Indian stocks.
+Primary data source: yfinance (Yahoo Finance)
+Secondary sources: Moneycontrol, NSE India
+
+Author: AI Stock Agent Team
+Version: 1.0
+Last Updated: 2026-07-07
+"""
+
 import json
 import re
 import yfinance as yf
@@ -8,6 +20,7 @@ from urllib.parse import quote_plus
 
 from src.database.crud import save_daily_record
 
+# Optional: cloudscraper for NSE data (bypasses Cloudflare)
 try:
     import cloudscraper
 except ImportError:

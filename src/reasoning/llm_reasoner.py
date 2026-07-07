@@ -1,22 +1,52 @@
+"""
+LLM Reasoner Module - AI Stock Agent
+
+This module handles LLM integration for generating stock analysis reports.
+Supports both local (Ollama) and cloud (OpenAI) LLM providers.
+
+Author: AI Stock Agent Team
+Version: 1.0
+Last Updated: 2026-07-07
+"""
+
 import requests
 import os
 from src.fetcher.market_fetcher import fetch_indian_stock_data
 
-# -----------------------------
+# ============================================================================
 # CONFIGURATION
-# -----------------------------
+# ============================================================================
+# These settings control which LLM models to use and their endpoints.
+# LOCAL_MODEL: Used for local inference via Ollama (recommended for privacy)
+# CLOUD_MODEL: Used for cloud inference via OpenAI (requires API key)
+# OLLAMA_URL: Local Ollama API endpoint (default: localhost:11434)
 
-LOCAL_MODEL = "llama3.2:3b"
-CLOUD_MODEL = "gpt-4o-mini"
+LOCAL_MODEL = "llama3.2:3b"  # 2.0GB model, fast on CPU
+CLOUD_MODEL = "gpt-4o-mini"   # Cloud fallback model
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_URL = "http://localhost:11434/api/generate"  # Use /api/generate for compatibility
 
 
-# -----------------------------
+# ============================================================================
 # LOCAL LLM (OLLAMA)
-# -----------------------------
+# ============================================================================
+# Ollama provides a simple HTTP API for running LLMs locally.
+# Benefits: Privacy-preserving, no API costs, works offline
+# Note: Use /api/generate endpoint (not /api/chat) for broader model compatibility
 
 def run_local_llama(prompt: str) -> str:
+    """
+    Send prompt to local Ollama LLM and return the response.
+    
+    Args:
+        prompt: The text prompt to send to the LLM
+        
+    Returns:
+        str: The LLM response text, or error message if failed
+        
+    Raises:
+        No exceptions raised - errors are returned as strings
+    """
     print("DEBUG: Using model:", LOCAL_MODEL)
 
     try:
@@ -27,9 +57,9 @@ def run_local_llama(prompt: str) -> str:
             json={
                 "model": LOCAL_MODEL,
                 "prompt": prompt,
-                "stream": False
+                "stream": False  # Set to True for streaming responses
             },
-            timeout=120
+            timeout=120  # 2-minute timeout for large models
         )
 
         print("DEBUG: Ollama POST returned status:", response.status_code)
@@ -37,6 +67,7 @@ def run_local_llama(prompt: str) -> str:
         data = response.json()
         print("DEBUG: Ollama response:", data)
 
+        # Handle different response formats from Ollama
         if "response" in data:
             return data["response"]
 
