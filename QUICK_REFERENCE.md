@@ -115,6 +115,6 @@ if isinstance(df.columns, pd.MultiIndex):
 
 ## 📝 Test Report Naming
 
-`TEST_REPORT_YYYY-MM-DD_HHMM.md`
+`TEST_REPORT.md`
 
-Example: `TEST_REPORT_2026-07-07_2230.md`
+This file should be overwritten with the latest run results each time tests are executed.

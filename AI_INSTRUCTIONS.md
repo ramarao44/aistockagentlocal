@@ -43,15 +43,15 @@
 - If any test fails, fix the issue before proceeding
 - Document test results in the test report
 
-### 4. Generate Test Reports with Date/Time
-- **Test Report Naming:** `TEST_REPORT_YYYY-MM-DD_HHMM.md`
+### 4. Generate and Update a Single Test Report
+- **Test Report File:** `TEST_REPORT.md`
 - **Include in every test report:**
   - Test date and time
   - Environment details
   - Test results (PASS/FAIL)
   - Sample output
   - Any issues found
-- **Push latest test results** to repository
+- **Overwrite `TEST_REPORT.md` with the latest test results** on each run
 
 ### 5. Update Design Document Before Pushing
 - **Always update `DESIGN_DEVELOPMENT_DOCUMENT.md`** before pushing changes
