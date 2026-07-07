@@ -44,7 +44,7 @@
 - Document test results in the test report
 
 ### 4. Generate and Update a Single Test Report
-- **Test Report File:** `TEST_REPORT.md`
+- **Test Report File:** `reports/TEST_REPORT.md`
 - **Include in every test report:**
   - Test date and time
   - Environment details
@@ -127,7 +127,7 @@
 - [ ] Run ALL tests (test_mvp, test_db, test_llm_reasoning)
 - [ ] Verify all tests PASS
 - [ ] Update `DESIGN_DEVELOPMENT_DOCUMENT.md`
-- [ ] Create `TEST_REPORT_YYYY-MM-DD_HHMM.md`
+- [ ] Overwrite `reports/TEST_REPORT.md` with latest results
 - [ ] Update `LESSONS_LEARNED.md` if significant learning occurred
 - [ ] Get user approval before push
 
@@ -136,6 +136,19 @@
 - [ ] Fix the issue
 - [ ] Re-run tests
 - [ ] Document the fix in lessons learned
+
+### 🔐 Pre-Push Validation Checklist
+**MANDATORY - Verify continuity and traceability before pushing:**
+- [ ] All code changes have corresponding comments explaining WHY
+- [ ] DESIGN_DEVELOPMENT_DOCUMENT.md Change Log has dated entry
+- [ ] reports/TEST_REPORT.md reflects latest test results
+- [ ] LESSONS_LEARNED.md updated if new patterns discovered
+- [ ] Commit message is descriptive and follows format (feat:/fix:/docs:/etc.)
+- [ ] No orphaned code or commented-out blocks
+- [ ] All imports are used and documented
+- [ ] Error handling added for external dependencies (APIs, databases)
+- [ ] Logging added for important operations
+- [ ] User awareness: What changed and why?
 
 ---
 
@@ -252,19 +265,24 @@ Before saving any changes, verify:
 ## 📝 Documentation Update Checklist
 
 When updating `DESIGN_DEVELOPMENT_DOCUMENT.md`:
-- [ ] Add entry to Change Log
+- [ ] Add entry to Change Log with this format:
+  ```
+  **YYYY-MM-DD:** [Action verb] [what changed] - [brief reason/impact]
+  Example: 2026-07-08: Added defensive error handling for cloud LLM imports - enables graceful fallback to local models
+  ```
 - [ ] Update affected function specifications
 - [ ] Update data models if changed
 - [ ] Update API endpoints if changed
 - [ ] Update file structure if new files added
 - [ ] Update testing section if new tests added
+- [ ] Cross-reference related changes (e.g., if code changed, update both function spec AND change log)
 
 ---
 
 ## 🚀 Quick Start for New AI Sessions
 
 1. **Read the design document:** `DESIGN_DEVELOPMENT_DOCUMENT.md`
-2. **Check latest test report:** `TEST_REPORT_*.md`
+2. **Check latest test report:** `reports/TEST_REPORT.md`
 3. **Understand the architecture:** Review component diagrams
 4. **Run baseline tests:** Ensure current state is working
 5. **Review the code:** Understand existing patterns

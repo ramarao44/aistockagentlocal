@@ -115,6 +115,6 @@ if isinstance(df.columns, pd.MultiIndex):
 
 ## 📝 Test Report Naming
 
-`TEST_REPORT.md`
+`reports/TEST_REPORT.md`
 
 This file should be overwritten with the latest run results each time tests are executed.
