@@ -103,6 +103,65 @@
 
 ---
 
+## 📊 Current Project Status
+
+| Attribute | Value |
+|-----------|-------|
+| **Phase** | 2 (Database Layer) |
+| **Last Test** | 2026-07-07 (All tests PASS) |
+| **Next Milestone** | Charts & Visualization |
+| **Known Issues** | Delivery percentage scraping (Moneycontrol) |
+| **Active Models** | llama3.2:3b, phi3.5, mistral:7b |
+
+---
+
+## ⚠️ DO NOT SKIP - Critical Steps
+
+### Before ANY Code Changes
+- [ ] Read `AI_INSTRUCTIONS.md` completely
+- [ ] Read `DESIGN_DEVELOPMENT_DOCUMENT.md` for context
+- [ ] Check `TEST_REPORT_*.md` for current test status
+- [ ] Run baseline tests to ensure current state works
+
+### After Code Changes
+- [ ] Run ALL tests (test_mvp, test_db, test_llm_reasoning)
+- [ ] Verify all tests PASS
+- [ ] Update `DESIGN_DEVELOPMENT_DOCUMENT.md`
+- [ ] Create `TEST_REPORT_YYYY-MM-DD_HHMM.md`
+- [ ] Update `LESSONS_LEARNED.md` if significant learning occurred
+- [ ] Get user approval before push
+
+### If Tests FAIL
+- [ ] Do NOT push
+- [ ] Fix the issue
+- [ ] Re-run tests
+- [ ] Document the fix in lessons learned
+
+---
+
+## 📝 Development Log Template
+
+```markdown
+## Development Log - YYYY-MM-DD
+
+### Changes Made
+- [List all changes]
+
+### Tests Run
+- [List tests executed]
+
+### Tests Status
+- [PASS/FAIL for each test]
+
+### Lessons Learned
+- [Any new learnings]
+
+### Next Steps
+- [What to do next]
+```
+
+---
+
 ## 🛠️ Project-Specific Guidelines
 
 ### Code Structure
