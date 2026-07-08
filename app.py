@@ -6,13 +6,14 @@ async def start():
     await cl.Message(
         content=(
             "📈 Welcome to the AI Stock Agent!\n\n"
-            "Enter a stock ticker (e.g., AAPL, MSFT, TSLA) and choose mode:\n"
-            "- **local** → fast, uses Ollama (phi4)\n"
+            "Enter a stock ticker (e.g., RELIANCE, TCS, INFY) and choose mode:\n"
+            "- **local** → uses Ollama (llama3.2:3b) - private, no API costs\n"
+            "- **deepseek** → uses DeepSeek API - free cloud, fast responses\n"
             "- **cloud** → uses GPT-4o-mini (if configured)\n"
         )
     ).send()
 
-    await cl.sleep(0.1)
+    await cl.sleep(1)
 
     await cl.Message(content="What ticker would you like to analyze?").send()
 
