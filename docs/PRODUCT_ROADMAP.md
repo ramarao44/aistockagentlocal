@@ -43,23 +43,36 @@ Build a comprehensive, local-first AI stock analysis platform for Indian markets
 
 ---
 
-## 🔄 Phase 2 - Database Layer (IN PROGRESS)
+## 🔄 Phase 2 - Database Layer (UPDATED: 87.5% Complete ✨)
+
+### Status Update (2026-07-09)
+🔍 **Comprehensive Audit Completed:** Phase 2 audit revealed 3 critical issues affecting real completion rate:
+
+**Before Audit:** 62.5% (claimed 100%)
+**After Fixes:** 87.5% (3 issues resolved, 1 known limitation documented)
+
+**Key Findings:**
+- ✅ **FIXED:** Indicator storage schema was incomplete - added 13 new columns to capture all technical indicators
+- ✅ **FIXED:** MA200 was returning None - extended data fetch period from 6mo to 1y 
+- ⚠️ **IMPROVED:** Delivery volume gracefully handles web scraping failures (experimental feature)
+
+**See:** `docs/AUDIT_REPORT_2026_07_09.md` for comprehensive findings and learning points
 
 ### Features
-| Feature | Status | Notes |
-|---------|--------|-------|
-| SQLite database setup | ✅ DONE | `src/db/database.py` |
-| SQLAlchemy models | ✅ DONE | `src/database/models.py` |
-| CRUD operations | ✅ DONE | `src/database/crud.py` |
-| Market data storage | ✅ DONE | `save_market_data()` |
-| Indicator storage | ✅ DONE | `save_indicators()` |
-| News storage | ✅ DONE | `save_news()` |
-| Sentiment storage | ✅ DONE | `save_sentiment()` |
-| Delivery data storage | ✅ DONE | `save_daily_record()` |
+| Feature | Status | Implementation | Notes |
+|---------|--------|---|---|
+| SQLite database setup | ✅ DONE | `src/db/database.py` + `src/database/engine.py` | Dual-layer support (legacy + new SQLAlchemy) |
+| SQLAlchemy models | ✅ DONE | `src/database/models.py` (30 columns) | Updated with all technical indicators |
+| CRUD operations | ✅ DONE | `src/database/crud.py` | Full create/read operations working |
+| Market data storage | ✅ DONE | OHLCV + 13 indicators | Now stores: RSI, MACD, MA20/50/200, ADX, Bollinger Bands, etc. |
+| Indicator storage | ✅ **FIXED** | All 13 indicators persisted | **Audit Fix:** Was 0% implemented, now 100% complete |
+| News storage | ✅ DONE | `src/fetcher/news_fetcher.py` | RSS feed pipeline working |
+| Sentiment storage | ✅ DONE | `src/analyzer/sentiment_analyzer.py` | VADER sentiment scoring working |
+| Delivery data storage | ⚠️ EXPERIMENTAL | Moneycontrol web scraping + NSE API option | **Known Limitation:** Web scraping unreliable, gracefully returns None |
 
-### Known Issues
-- [ ] Delivery percentage returns 0.0 (Moneycontrol scraping)
-- [ ] MA200 sometimes returns None (insufficient data)
+### Known Issues & Limitations
+- [ ] ~~Delivery percentage returns 0.0~~ → **Updated:** Returns None with graceful fallback (experimental, non-critical)
+- [ ] ~~MA200 sometimes returns None~~ → **Fixed:** Extended data period from 6mo to 1y (now 252+ trading days)
 
 ---
 

@@ -54,7 +54,7 @@ def normalize_ticker(user_input: str):
 # Fetch Price History
 # ---------------------------------------------------------
 
-def fetch_price_history(ticker: str, period="6mo", interval="1d"):
+def fetch_price_history(ticker: str, period="1y", interval="1d"):
     try:
         df = yf.download(ticker, period=period, interval=interval, progress=False)
         if df is None or df.empty:
@@ -109,7 +109,7 @@ def compute_bollinger_bands(df, window=20):
     std = df["Close"].rolling(window).std()
     upper = ma + (std * 2)
     lower = ma - (std * 2)
-    return upper.iloc[-1], lower.iloc[-1]
+    return upper.iloc[-1], lower.iloc[-1], ma.iloc[-1]
 
 
 def compute_atr(df, period=10):
@@ -695,9 +695,10 @@ def fetch_indian_stock_data(user_input: str):
             supports, resistances = [], []
             pivot_points = {"pivot": None, "r1": None, "s1": None}
             rsi = None
+            ma20 = None
             ma50 = None
             ma200 = None
-            boll_upper, boll_lower = None, None
+            boll_upper, boll_lower, boll_mid = None, None, None
             current_price = None
             supertrend_value, supertrend_dir = None, "DOWN"
             macd_line, macd_signal, macd_hist = None, None, None
@@ -708,9 +709,10 @@ def fetch_indian_stock_data(user_input: str):
 
             # Compute indicators
             rsi = compute_rsi(df)
+            ma20 = compute_moving_average(df, 20)
             ma50 = compute_moving_average(df, 50)
             ma200 = compute_moving_average(df, 200)
-            boll_upper, boll_lower = compute_bollinger_bands(df)
+            boll_upper, boll_lower, boll_mid = compute_bollinger_bands(df)
             current_price = df["Close"].iloc[-1]
 
             # SuperTrend
@@ -729,6 +731,8 @@ def fetch_indian_stock_data(user_input: str):
 
         if rsi is not None:
             rsi = safe_float(rsi)
+        if ma20 is not None:
+            ma20 = safe_float(ma20)
         if ma50 is not None:
             ma50 = safe_float(ma50)
         if ma200 is not None:
@@ -738,21 +742,26 @@ def fetch_indian_stock_data(user_input: str):
         if boll_lower is not None:
             boll_lower = safe_float(boll_lower)
 
-        # Delivery Volume % (Moneycontrol)
+        # Delivery Volume % (Moneycontrol) - EXPERIMENTAL
+        # Note: Delivery data fetching is unreliable due to web scraping.
+        # Returns None if data cannot be fetched. This is non-critical for trend analysis.
+        delivery_pct = None
+        delivery_qty = None
+        total_volume = None
         try:
             delivery_data = fetch_moneycontrol_delivery(user_input)
             if delivery_data.get("success"):
                 delivery_pct = delivery_data.get("delivery_pct")
                 delivery_qty = delivery_data.get("delivery_qty")
                 total_volume = delivery_data.get("total_volume")
+                # print(f"[DEBUG] Delivery data fetched: {delivery_pct}%")
             else:
-                delivery_pct = None
-                delivery_qty = None
-                total_volume = None
-        except Exception:
-            delivery_pct = None
-            delivery_qty = None
-            total_volume = None
+                error_msg = delivery_data.get("error", "Unknown error")
+                # print(f"[DEBUG] Delivery fetch failed: {error_msg}")
+                pass
+        except Exception as e:
+            # print(f"[DEBUG] Exception fetching delivery data: {str(e)}")
+            pass
 
         # Delivery trend over the last 3 days
         delivery_trend_pct = None
@@ -779,19 +788,38 @@ def fetch_indian_stock_data(user_input: str):
         if not df.empty:
             record = save_daily_record({
                 "symbol": user_input,
+                # OHLCV
                 "open": float(df["Open"].iloc[-1]),
                 "high": float(df["High"].iloc[-1]),
                 "low": float(df["Low"].iloc[-1]),
                 "close": float(df["Close"].iloc[-1]),
                 "volume": int(df["Volume"].iloc[-1]) if "Volume" in df.columns and not df["Volume"].isna().iloc[-1] else None,
+                # Technical Indicators
+                "rsi": rsi,
+                "macd_line": macd_line,
+                "macd_signal": macd_signal,
+                "macd_histogram": macd_hist,
+                "ma20": ma20,
+                "ma50": ma50,
+                "ma200": ma200,
+                "adx": adx_val,
+                "plus_di": plus_di_val,
+                "minus_di": minus_di_val,
+                "bollinger_upper": boll_upper,
+                "bollinger_lower": boll_lower,
+                "bollinger_middle": boll_mid,
+                # Volume & Breakout
                 "delivery_pct": delivery_pct,
                 "delivery_qty": delivery_qty,
                 "total_volume": total_volume,
                 "vwap": vwap,
                 "volume_breakout": int(bool(volume_breakout)) if volume_breakout is not None else None,
+                "today_volume": today_volume,
+                # Price Levels
                 "supports": supports,
                 "resistances": resistances,
                 "pivot_points": pivot_points,
+                # Analysis Results
                 "trend_score": trend_score,
             })
         else:

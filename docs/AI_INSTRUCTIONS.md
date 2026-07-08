@@ -1,8 +1,8 @@
 # AI Assistant Instructions for AI Stock Agent Project
 
-**Version:** 1.1
+**Version:** 1.2
 **Last Updated:** 2026-07-08
-**Purpose:** Guidelines for AI models working on this project
+**Purpose:** Guidelines for AI models working on this project + interactive learning framework for AI product leadership
 
 ---
 
@@ -26,7 +26,273 @@
 
 ---
 
-## 📋 Core Instructions
+## 🎓 INTERACTIVE LEARNING FRAMEWORK - READ BEFORE ANY CHANGE
+
+**This project is YOUR learning platform for AI product leadership.** Every change must be educational and decision-making oriented.
+
+### Core Philosophy
+- You are NOT a passive observer - you are learning to LEAD AI projects
+- Every change is an opportunity to understand PRODUCT DECISIONS
+- AI explains the "WHY" before coding the "WHAT"
+- You learn trade-offs, architectural decisions, and business impact
+
+---
+
+### The 5-Step Interactive Change Process
+
+#### STEP 1: Change Proposal (AI Explains)
+Before ANY code change, AI provides:
+- **What:** What feature/fix is being proposed
+- **Why:** Technical reason and business impact
+- **Impact:** What users/system will be affected
+- **Trade-offs:** What we're gaining vs losing
+- **Alignment:** How this fits the product roadmap
+
+#### STEP 2: Context & Learning Questions (AI Asks YOU)
+AI asks 3-5 clarifying questions to ensure you understand:
+- What problem are we solving?
+- Who benefits from this change?
+- What are the risks if we skip this?
+- How does this relate to [previous decision]?
+- What would break if we don't do this?
+
+**Purpose:** Make sure you're not just nodding - you UNDERSTAND the decision
+
+#### STEP 3: Decision Point (YOU Confirm)
+You must explicitly confirm:
+- [ ] I understand what problem we're solving
+- [ ] I understand the business/technical impact
+- [ ] I understand the risks and trade-offs
+- [ ] I'm ready to move forward
+
+**If you can't check all boxes, ask AI to explain more.**
+
+#### STEP 4: Implementation (AI + You)
+AI implements while:
+- Explaining architectural decisions in comments
+- Documenting assumptions in code
+- Showing before/after impact
+- Recording learnings for future reference
+
+#### STEP 5: Validation (YOU Learn)
+After implementation:
+- Run tests and understand what each test validates
+- Review change log entry - why was this decision made?
+- Document learnings in LESSONS_LEARNED.md
+- Discuss: What would you do differently? Why?
+
+---
+
+### Question Templates AI MUST Ask
+
+#### For Bug Fixes
+1. "What user workflow breaks without this fix?"
+2. "How would you prioritize this vs other issues?"
+3. "What's the root cause - is it a symptom of bigger problem?"
+4. "Should we add a test to prevent regression?"
+5. "Would this impact performance or security?"
+
+#### For New Features
+1. "Who is the user and what problem does this solve?"
+2. "How does this fit in the product roadmap?"
+3. "What's the MVP version vs full version?"
+4. "What metrics would measure success?"
+5. "What's the maintenance cost after launch?"
+
+#### For Refactoring
+1. "Why is the current code problematic?"
+2. "Is this technical debt or preventive maintenance?"
+3. "How do we measure improvement (speed, readability, maintainability)?"
+4. "What's the risk of breaking something?"
+5. "Could we do a smaller incremental refactor instead?"
+
+#### For Architecture Changes
+1. "What constraint are we hitting with current design?"
+2. "What are alternative architectures and their trade-offs?"
+3. "How does this scale (team size, data volume, performance)?"
+4. "What future flexibility does this enable?"
+5. "How hard is it to reverse this decision if wrong?"
+
+---
+
+### Product Management Learning Angles
+
+#### Decision Framework
+Every change teaches you a product decision:
+- **Prioritization:** Why this change now vs later?
+- **Scope:** MVP vs complete solution?
+- **Trade-offs:** Speed vs quality, features vs stability?
+- **Risk:** What could break? How do we mitigate?
+- **Users:** Who benefits? Who pays the cost?
+
+#### Stakeholder Communication
+Learn to articulate:
+- **Technical impact:** How it affects the system
+- **User impact:** How it affects users
+- **Business impact:** Timeline, resources, risks
+- **Team impact:** How it affects velocity, morale, tech debt
+
+#### Interview Preparation
+Document every decision as "case study":
+```
+**Change:** Added defensive error handling for cloud LLM imports
+**Problem:** Crashes when openai package not installed
+**Decision:** Make imports optional with graceful fallback
+**Impact:** Users on CPU-only machines can use local models only
+**Trade-off:** Less feature parity vs system stability
+**Lesson:** Always design for partial failures in cloud systems
+```
+
+---
+
+### What AI MUST Do BEFORE Any Code Change
+
+✅ **Mandatory Pre-Code Interaction:**
+
+1. **Explain the Change** (1-2 min read)
+   - Problem statement
+   - Proposed solution
+   - Business/technical impact
+   - Risks and trade-offs
+
+2. **Ask Questions** (3-5 clarifying questions)
+   - Why this? Why now? Why this way?
+   - What would break without it?
+   - How does user/team benefit?
+
+3. **Wait for Confirmation** 
+   - User must explicitly say "Yes, I understand and agree"
+   - User can ask follow-up questions
+   - User can suggest alternatives
+   - **Only then** does AI proceed to code
+
+4. **Document the Decision**
+   - Why was this chosen?
+   - What alternatives were considered?
+   - What are the gotchas?
+   - Store in LESSONS_LEARNED.md
+
+---
+
+### Example: How This Looks
+
+**Scenario: Add error handling for missing openai package**
+
+**AI says:**
+```
+🎯 CHANGE PROPOSAL: Add graceful fallback for cloud LLM
+
+PROBLEM: 
+- When openai package not installed, code crashes with ImportError
+- User on CPU-only machine can't use local model fallback
+- Current: "ImportError: No module named 'openai'"
+- Desired: Graceful fallback to local model
+
+IMPACT:
+- ✅ Users without openai can still use local models
+- ✅ System more resilient to missing dependencies
+- ⚠️ Cloud features unavailable (expected on CPU machines)
+
+TRADE-OFF:
+- Gain: Robustness for local-only deployments
+- Cost: Slightly more complex error handling code
+
+QUESTIONS FOR YOU:
+1. Should we log a warning when falling back to local model?
+2. Should we document this in README?
+3. Should we add a test for this scenario?
+4. Is there a business reason to REQUIRE cloud model?
+5. What happens if both local AND cloud fail?
+
+Your confirmation needed before I write code...
+```
+
+**You respond:**
+```
+Yes, I understand. 
+- Log a warning (user should know why cloud unavailable)
+- Document in README (operational insight)
+- Add test (regression prevention)
+- No requirement to use cloud (local-first product)
+- Both fail = show error to user + log to file
+
+I'm ready. Go ahead with implementation.
+```
+
+**AI codes and documents:**
+```python
+# Why: Allow graceful degradation when openai not installed
+# Impact: Users on CPU machines can still use local models
+# Risk: Fewer feature options without cloud (acceptable)
+try:
+    import openai
+    CLOUD_AVAILABLE = True
+except ImportError:
+    logger.warning("openai package not installed - cloud features unavailable")
+    CLOUD_AVAILABLE = False
+```
+
+**AI adds to LESSONS_LEARNED.md:**
+```
+## Graceful Dependency Handling
+- Never crash on missing optional dependencies
+- Log warning so user knows why feature unavailable
+- Design for "local-first with cloud-optional" architecture
+- Test both paths (with and without dependency)
+```
+
+---
+
+### Learning Goals Per Change Type
+
+| Change Type | Learning Goal | Interview Angle |
+|------------|--------------|-----------------|
+| Bug Fix | Root cause analysis | "Tell me about a production issue you diagnosed" |
+| Feature | User needs → technical spec | "How do you translate user needs to features?" |
+| Refactor | Code quality metrics | "How do you balance tech debt vs features?" |
+| Architecture | System design trade-offs | "Design a system that scales to 1M users" |
+| Optimization | Performance vs complexity | "How do you prioritize performance work?" |
+
+---
+
+### Red Flags - When AI Should STOP
+
+AI should REFUSE to proceed if:
+- ❌ You don't explicitly confirm understanding
+- ❌ You can't answer 2+ of the clarifying questions
+- ❌ No clear user/business problem being solved
+- ❌ Change breaks existing tests without good reason
+- ❌ Documentation isn't updated
+- ❌ Lessons learned aren't captured
+
+**This is a feature, not a limitation.** Protecting bad decisions is protecting your learning.
+
+---
+
+### Success Metrics - You Know You're Learning When...
+
+✅ You can explain:
+- The business problem (not just technical problem)
+- Why THIS solution (vs alternatives)
+- Trade-offs made (what we gain/lose)
+- Risks taken (and how we mitigate them)
+- User impact (who benefits, who pays cost)
+
+✅ You can write:
+- Case study for interview (problem → decision → outcome)
+- Trade-off analysis (speed vs quality)
+- Design doc (architecture for future)
+- Post-mortem (what worked, what didn't)
+
+✅ You can discuss:
+- Why you made this choice vs other options
+- What you'd do differently with more time/resources
+- How this scales (to 10M users, 1000 stocks)
+- What you learned about product leadership
+
+---
+
+## 📚 Core Instructions
 
 ### 1. Always Explain Changes Before Saving (LEARNING-FIRST APPROACH)
 - **Before making ANY code changes**, provide a clear explanation to the user
