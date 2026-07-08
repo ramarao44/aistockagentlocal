@@ -144,6 +144,24 @@ def compute_rsi(df: pd.DataFrame, period: int = 14) -> float:
     return rsi.iloc[-1]
 ```
 
+## Source Code Flow Chart
+```
+[DataFrame with OHLCV]
+        |
+        v
+[compute_rsi()] --> [RSI Value]
+[compute_macd()] --> [MACD Line, Signal, Histogram]
+[compute_moving_average()] --> [MA20, MA50]
+[compute_supertrend()] --> [SuperTrend Value, Direction]
+[calculate_vwap()] --> [VWAP Value]
+[compute_adx()] --> [ADX, +DI, -DI]
+[compute_bollinger_bands()] --> [Upper, Middle, Lower]
+[detect_volume_breakout()] --> [True/False]
+        |
+        v
+[Return all indicators in dict]
+```
+
 ## Definition of Done
 - [x] All sub-requirements implemented
 - [x] Test cases for each sub-feature created

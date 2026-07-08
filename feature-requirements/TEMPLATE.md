@@ -64,6 +64,14 @@ def function_name(params) -> return_type:
     # Implementation here
 ```
 
+## Source Code Flow Chart
+```
+[User Input] --> [Function] --> [Process] --> [Return/Output]
+       |              |           |              |
+       v              v           v              v
+   [Input Data] --> [Logic] --> [Data Store] --> [Result]
+```
+
 ## Definition of Done
 - [ ] All sub-requirements implemented
 - [ ] Test cases for each sub-feature created
@@ -80,3 +88,4 @@ def function_name(params) -> return_type:
 - [List dependencies]
 
 ## Test Cases
+- `scripts/test_[module].py` - [Description]

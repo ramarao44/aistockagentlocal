@@ -91,6 +91,26 @@ def fetch_indian_stock_data(user_input: str) -> dict:
     }
 ```
 
+## Source Code Flow Chart
+```
+[User Input: "RELIANCE"]
+        |
+        v
+[normalize_ticker()] --> ["RELIANCE.NS", "RELIANCE.BO"]
+        |
+        v
+[fetch_price_history("RELIANCE.NS")]
+        |
+        v
+[DataFrame with OHLCV]
+        |
+        v
+[compute_indicators()]
+        |
+        v
+[Return: {success, ticker, price, rsi, ...}]
+```
+
 ## Definition of Done
 - [x] All sub-requirements implemented
 - [x] Test cases for each sub-feature created

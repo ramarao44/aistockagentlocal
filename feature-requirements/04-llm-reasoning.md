@@ -109,6 +109,26 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
         return run_cloud_llm(prompt)
 ```
 
+## Source Code Flow Chart
+```
+[User Input: ticker]
+        |
+        v
+[fetch_indian_stock_data()] --> [market_data dict]
+        |
+        v
+[Build Prompt with real data]
+        |
+        v
+[run_local_llama() or run_cloud_llm()]
+        |
+        v
+[LLM Response: analysis text]
+        |
+        v
+[Return: formatted report]
+```
+
 ## Definition of Done
 - [x] All sub-requirements implemented
 - [x] Test cases for each sub-feature created

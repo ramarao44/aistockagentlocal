@@ -134,6 +134,29 @@ def save_market_data(df: pd.DataFrame, ticker: str):
         conn.commit()
 ```
 
+## Source Code Flow Chart
+```
+[DataFrame with OHLCV]
+        |
+        v
+[save_market_data()] --> [INSERT OR REPLACE]
+[save_indicators()] --> [INSERT OR REPLACE]
+[save_news()] --> [INSERT OR REPLACE]
+[save_sentiment()] --> [INSERT OR REPLACE]
+        |
+        v
+[SQLite Database: data/market.db]
+        |
+        v
+[load_market_data()] <-- [SELECT]
+[load_indicators()] <-- [SELECT]
+[load_news()] <-- [SELECT]
+[load_sentiment()] <-- [SELECT]
+        |
+        v
+[Return DataFrames]
+```
+
 ## Definition of Done
 - [x] All sub-requirements implemented
 - [x] Test cases for each sub-feature created
