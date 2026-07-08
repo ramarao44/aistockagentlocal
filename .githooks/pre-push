@@ -1,0 +1,35 @@
+#!/bin/bash
+# Pre-push hook - enforces basic safety checks
+
+echo ""
+echo "🔐 PRE-PUSH VALIDATION"
+echo "======================================"
+
+# Check 1: TEST_REPORT.md exists
+if [ ! -f "reports/TEST_REPORT.md" ]; then
+    echo "❌ FAIL: reports/TEST_REPORT.md not found"
+    echo "Run tests first!"
+    exit 1
+fi
+
+# Check 2: .env not staged
+if git diff --cached --name-only | grep -q "^\.env$"; then
+    echo "❌ FAIL: .env file is staged! Remove it before pushing"
+    exit 1
+fi
+
+# Check 3: Large files (>10MB)
+while IFS= read -r file; do
+    if [ -f "$file" ]; then
+        size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo 0)
+        if [ "$size" -gt 10485760 ]; then
+            echo "❌ FAIL: Large file $file ($(echo "scale=2; $size / 1048576" | bc) MB)"
+            exit 1
+        fi
+    fi
+done < <(git diff --cached --name-only)
+
+echo ""
+echo "✅ Pre-push checks passed!"
+exit 0
+

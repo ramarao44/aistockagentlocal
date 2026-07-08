@@ -1,0 +1,15 @@
+yfinance
+pandas
+pandas-ta
+beautifulsoup4
+firecrawl
+langgraph
+chainlit
+sqlite-utils
+pgvector
+sentence-transformers
+sqlalchemy
+apscheduler
+fastapi
+uvicorn
+python-dotenv
