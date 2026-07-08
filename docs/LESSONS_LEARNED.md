@@ -1,18 +1,186 @@
 # Lessons Learned - AI Stock Agent Project
 
-**Version:** 1.0
-**Last Updated:** 2026-07-08
-**Purpose:** Document technical challenges, solutions, and best practices for future reference and interview preparation
+**Version:** 2.0
+**Last Updated:** 2026-07-09
+**Purpose:** Document technical challenges, solutions, AND product leadership lessons from Phase 2 audit for interview preparation
 
 ---
 
 ## 📚 Table of Contents
-1. [Library Compatibility Issues](#library-compatibility-issues)
-2. [Data Handling Challenges](#data-handling-challenges)
-3. [LLM Integration Lessons](#llm-integration-lessons)
-4. [Architecture Decisions](#architecture-decisions)
-5. [Performance Optimizations](#performance-optimizations)
-6. [Debugging Techniques](#debugging-techniques)
+1. [Product Leadership Lessons (NEW)](#product-leadership-lessons) ← **Read this for interviews**
+2. [Technical Lessons](#technical-lessons)
+3. [Library Compatibility Issues](#library-compatibility-issues)
+4. [Data Handling Challenges](#data-handling-challenges)
+5. [LLM Integration Lessons](#llm-integration-lessons)
+6. [Architecture Decisions](#architecture-decisions)
+7. [Performance Optimizations](#performance-optimizations)
+8. [Debugging Techniques](#debugging-techniques)
+
+---
+
+## 🏆 Product Leadership Lessons
+
+**These lessons come from Phase 2 Audit experience. See** [AI_PM_INTERVIEW_PREP.md](./AI_PM_INTERVIEW_PREP.md) **for complete context and STAR stories.**
+
+### Lesson #1: Feature Completion Requires End-to-End Verification
+**From:** Story #1 - Feature Completion Verification  
+**Situation:** Phase 2 marked 100% complete, but only 62.5% actually worked
+
+**Key Learning:**
+- Tests passing ≠ Features working
+- Execution success ≠ Logical correctness
+- Need verification strategy: computation → storage → retrieval → presentation
+
+**For PM Roles:**
+- Always verify features end-to-end before declaring complete
+- Create audit checklist before moving to next phase
+- Passing tests is necessary but not sufficient
+
+**Interview Talking Point:**
+> "I learned that 'DONE' requires systematic verification. Tests passing doesn't mean features work end-to-end. I created a verification strategy that caught 3 critical issues that tests missed."
+
+---
+
+### Lesson #2: Database Schema is a Product Decision
+**From:** Story #2 - Database Schema Alignment  
+**Situation:** Computing 13 indicators but storing 0 of them
+
+**Key Learning:**
+- Schema defines what your system can actually deliver
+- Must align with computational pipeline
+- Incomplete schema breaks downstream features
+- 0% indicator storage → 100% after extending schema
+
+**For PM Roles:**
+- Database design affects product capability
+- What you persist defines what you can show to users
+- Schema review is critical product decision point
+
+**Interview Talking Point:**
+> "Database schema is not just technical detail—it's product decision. We were computing indicators but not persisting them. When I aligned the schema with our computation pipeline, Phase 3 (charts) became possible."
+
+---
+
+### Lesson #3: Features Have Implicit Data Constraints
+**From:** Story #3 - Data Constraint Analysis  
+**Situation:** MA200 returning None because data period insufficient (6mo vs 1y needed)
+
+**Key Learning:**
+- MA200 silently requires 200+ trading days
+- Data constraints often implicit, not obvious
+- Feature viability depends on data sufficiency
+- Extended period: 130 days → 252 days
+
+**For PM Roles:**
+- Always verify data prerequisites before shipping features
+- Discover constraints during design, not after launch
+- Time-series features are especially constrained
+
+**Interview Talking Point:**
+> "I found that features often have hidden data requirements. MA200 needed 200 days of data; we were fetching only 6 months. I discovered this constraint during verification, before it broke users. Now I always ask: what data does this feature need?"
+
+---
+
+### Lesson #4: Graceful Degradation for External Dependencies
+**From:** Story #4 - Graceful Error Handling  
+**Situation:** Delivery volume web scraping broken, but was marked non-critical
+
+**Key Learning:**
+- External dependencies (APIs, scraping) are fragile
+- Decide: is this critical or supplementary?
+- Use graceful degradation for non-critical features
+- Documented limitation better than broken feature
+
+**For PM Roles:**
+- Understand criticality of each data source
+- Design for partial failures
+- Some features can degrade gracefully
+- Document limitations clearly
+
+**Interview Talking Point:**
+> "External dependencies are fragile. I had to decide: fix the web scraper or make delivery data experimental? I chose graceful degradation—system works without it, core analysis doesn't depend on it. The lesson: understand criticality and design accordingly."
+
+---
+
+### Lesson #5: Roadmap Credibility From Honest Verification
+**From:** Story #5 - Roadmap vs Reality Gap  
+**Situation:** Roadmap claimed 100%, reality showed 62.5%, audit corrected to 87.5%
+
+**Key Learning:**
+- Marking features "DONE" too early creates trust gap
+- Systematic verification builds credibility
+- 37.5% gap closed through honest assessment
+- Updated roadmap shows which features are truly working
+
+**For PM Roles:**
+- Don't mark features complete without verification
+- Roadmap credibility depends on accurate status
+- Better to report 87.5% complete honestly than 100% questionably
+- Verification is continuous, not one-time
+
+**Interview Talking Point:**
+> "Roadmap credibility comes from honest verification. I updated Phase 2 status from claimed 100% to actual 87.5% after systematic audit. That honesty tells stakeholders: this roadmap is trustworthy because we verify before we claim."
+
+---
+
+### Lesson #6: Testing Strategy Beyond Execution
+**From:** Story #6 - Testing as Audit Strategy  
+**Situation:** All 19 tests passed, but output showed concerning patterns
+
+**Key Learning:**
+- Tests passing = execution success, not logical correctness
+- Need verification strategy combining automated + manual
+- Output patterns reveal issues tests don't catch
+- Systematic audit finds 3 issues tests missed
+
+**For PM Roles:**
+- Test coverage is necessary but not sufficient
+- Create verification strategy beyond test execution
+- Manual review of test output is valuable
+- Combine different validation approaches
+
+**Interview Talking Point:**
+> "I discovered that test execution and feature correctness are different. Tests passed, but output showed MA200 returning None. I created a verification strategy that combined automated testing with manual output review. This found issues that execution tests couldn't."
+
+---
+
+### Lesson #7: Documentation Multiplies Learning Value
+**From:** Story #7 - Documentation as Product Knowledge  
+**Situation:** Implicit knowledge about why features were incomplete
+
+**Key Learning:**
+- Document WHY decisions were made, not just WHAT was done
+- Each bug fix is learning opportunity
+- Good documentation enables future teams to learn
+- Creates bridge between implementation and understanding
+
+**For PM Roles:**
+- Invest in documentation of decisions, not just code
+- Explain assumptions in architecture
+- Document constraints and why they exist
+- Help future teams learn from your decisions
+
+**Interview Talking Point:**
+> "The difference between fixing a bug and learning from it is documentation. I documented not just the fixes, but why each issue existed. That documentation multiplies the learning value for the whole team."
+
+---
+
+## 📖 Complete Stories with Interview Delivery
+
+**For full STAR format stories with situation, task, action, result, and 2-min delivery versions:**
+
+👉 See [AI_PM_INTERVIEW_PREP.md](./AI_PM_INTERVIEW_PREP.md)
+
+That document contains:
+- 7 complete STAR stories (each 200-300 words)
+- Specific metrics and evidence
+- Deep-dive case studies
+- Quick reference for rapid telling
+- How to connect stories to PM competencies
+
+---
+
+## 🔧 Technical Lessons
 
 ---
 

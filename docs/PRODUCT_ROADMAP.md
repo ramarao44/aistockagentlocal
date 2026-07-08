@@ -6,7 +6,22 @@
 
 ---
 
-## 🎯 Vision
+## � Product Leadership Learnings from Phase 2 Audit
+
+**This roadmap update is backed by systematic audit and verification.** 
+
+**Key Learnings:**
+1. **Feature Completion Verification** - "DONE" requires end-to-end verification (computation → storage → retrieval)
+2. **Schema Alignment** - Database design affects what product can deliver downstream
+3. **Data Constraints** - Features have implicit data requirements (MA200 needs 200+ days)
+4. **Graceful Degradation** - Not all failures require heroic fixing; understand criticality
+5. **Honest Status Reporting** - Better to report 87.5% verified honestly than 100% questionably
+
+**See:** [AI_PM_INTERVIEW_PREP.md](./AI_PM_INTERVIEW_PREP.md) for 7 complete STAR stories and [LESSONS_LEARNED.md](./LESSONS_LEARNED.md#product-leadership-lessons) for product leadership lessons extracted from audit.
+
+---
+
+## �🎯 Vision
 Build a comprehensive, local-first AI stock analysis platform for Indian markets that provides real-time technical analysis, sentiment analysis, and actionable investment insights.
 
 ---

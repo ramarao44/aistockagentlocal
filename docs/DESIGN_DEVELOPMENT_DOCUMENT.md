@@ -21,9 +21,153 @@
 
 ## 📝 Change Log
 - **2026-07-09:** 🔄 MAJOR UPDATE - Phase 2 Audit Complete. Fixed 3 critical issues: (1) Added 13 indicator columns to database schema (was 0% implemented), (2) Extended data fetch from 6mo to 1y to enable MA200 calculation, (3) Improved delivery volume error handling. Phase 2 real completion updated from 62.5% → 87.5%. Comprehensive audit report in docs/AUDIT_REPORT_2026_07_09.md. All technical indicators (RSI, MACD, MA20/50/200, ADX, Bollinger Bands) now persist to database and are Phase 3-ready for visualization.
+  - **Interview Prep Created:** AI_PM_INTERVIEW_PREP.md documents 7 STAR stories extracted from audit experience. All documentation updated with cross-references to create cohesive learning ecosystem.
+  - **Architectural Lessons:** See "Architectural Decision Trade-offs" section below for insights into schema design, data pipeline constraints, and error handling patterns.
 - 2026-07-08: Added repo safety layers - created PUSH_CHECKLIST.md and .githooks/pre-push for automated validation. Protects against pushing without tests, accidental .env commits, and large files. Ensures all AI agents follow discipline before pushing.
 - 2026-07-08: Added pre-push validation checklist to AI_INSTRUCTIONS.md and standardized change log format for consistency - ensures traceability and continuity across AI sessions. Organized test reports in dedicated reports/ folder for better project organization.
 - 2026-07-07: Added defensive handling for empty/partial market data in the fetcher, made cloud LLM imports fail gracefully, and added an environment-based configuration example for local setup.
+
+---
+
+## 🏛️ Architectural Decision Trade-offs
+
+**These insights are captured as interview stories. See** [AI_PM_INTERVIEW_PREP.md](./AI_PM_INTERVIEW_PREP.md) **for complete context.**
+
+### Decision #1: Database Schema Design for Technical Indicators
+
+**Problem Addressed:**
+- Computing 13 technical indicators (RSI, MACD, MA20/50/200, ADX, Bollinger Bands)
+- Original schema only captured OHLCV (5 columns)
+- Data was computed but lost (not persisted to database)
+- Phase 3 (Charts) couldn't display any indicators
+
+**Decision Made:**
+- Extended StockDaily model from 10 columns → 30 columns
+- Added explicit columns for all 13 technical indicators
+- Updated data pipeline to populate indicator columns
+- Recreated database schema with SQLAlchemy
+
+**Trade-offs:**
+| Aspect | Trade-off |
+|--------|----------|
+| **Schema Complexity** | Simpler 5-column schema vs Complete 30-column schema (chose complete) |
+| **Development Time** | Quick MVP vs Robust design (chose robust) |
+| **Future Flexibility** | Fixed schema vs Flexible JSON columns (chose fixed for performance) |
+| **Query Performance** | Easier queries with explicit columns vs JSON extraction |
+
+**Why This Decision:**
+- Incomplete schema was fundamental architectural problem
+- Can't build Phase 3 visualization without persisted indicators
+- Explicit columns enable better query performance than JSON
+- Cost of fixing wrong is high (all of Phase 3); cost of adding columns is low
+
+**Impact:**
+- ✅ All indicators now available for Phase 3
+- ✅ Better query performance (direct column access)
+- ✅ Data integrity (schema enforces indicator presence)
+- ⚠️ Schema migration required when adding new indicators
+
+**Interview Insight:**
+> "Database schema is a critical product decision. I had to choose between quick MVP (simpler schema) and robust design (complete schema). I chose complete because Phase 3 couldn't work without it. The lesson: understand downstream dependencies when designing your schema."
+
+---
+
+### Decision #2: Data Period for Historical Analysis
+
+**Problem Addressed:**
+- MA200 (200-day moving average) returning None
+- Default 6-month fetch provides ~130 trading days
+- MA200 requires minimum 200+ trading days
+- Long-term trend analysis unavailable
+
+**Decision Made:**
+- Extended data fetch period from "6mo" → "1y"
+- Now fetches ~252 trading days (1 year)
+- Sufficient for MA200 and other long-term indicators
+
+**Trade-offs:**
+| Aspect | Trade-off |
+|--------|----------|
+| **Data Volume** | Less data (6 months) vs More data (1 year) (chose 1 year) |
+| **API Calls** | Faster fetch vs More data points (chose more data) |
+| **Storage** | Smaller database vs Complete historical context (chose context) |
+| **Analysis Depth** | Short-term only vs Short+Long-term (chose both) |
+
+**Why This Decision:**
+- Features have implicit data requirements
+- Better to discover constraint during verification than after launch
+- 1 year fetch cost negligible vs Phase 3 value
+- Users expect long-term trend analysis for stock decisions
+
+**Impact:**
+- ✅ MA200 now computes correctly (values: 1307-2697)
+- ✅ Long-term trend analysis available
+- ✅ Better investment insights (long-term patterns visible)
+- ⚠️ Slightly larger database (not significant)
+
+**Interview Insight:**
+> "Features have hidden data requirements. I discovered that MA200 needed 200+ days of data. The lesson: verify data constraints during design, before they break users. Ask: what data does this feature need to work correctly?"
+
+---
+
+### Decision #3: Error Handling for External Dependencies
+
+**Problem Addressed:**
+- Delivery percentage fetched via Moneycontrol web scraping
+- Web scraping broke when Moneycontrol changed HTML
+- All delivery_pct values returned None
+- Feature looked broken, but was it critical?
+
+**Decision Made:**
+- Made delivery volume "experimental" feature
+- Graceful degradation: returns None safely
+- Documented limitation and future NSE API option
+- Core analysis works without delivery data
+
+**Trade-offs:**
+| Aspect | Trade-off |
+|--------|----------|
+| **Feature Availability** | Fix scraper vs Make experimental (chose experimental) |
+| **User Experience** | Missing data vs Silent failure (chose documented None) |
+| **Investment** | Heroic fixing vs Move on (chose move on) |
+| **Future Path** | Maintain fragile scraper vs Switch to NSE API (chose NSE API path) |
+
+**Why This Decision:**
+- Delivery volume is supplementary, not critical
+- Trend score works perfectly without this data
+- Web scraping is inherently fragile (HTML changes)
+- NSE API is better long-term solution
+- Cost of maintaining scraper > value of supplementary data
+
+**Impact:**
+- ✅ System stable without delivery data
+- ✅ Clear documentation of limitation
+- ✅ Prioritized effort on critical features
+- ✅ Path to better solution (NSE API) documented
+- ⚠️ User doesn't get delivery insights (supplementary feature)
+
+**Interview Insight:**
+> "Not every feature failure requires heroic fixing. I evaluated criticality and decided delivery volume was supplementary. I chose graceful degradation: system works without it, documentation explains why. The lesson: understand criticality and design error handling appropriately."
+
+---
+
+### Decision Pattern: Schema Before Features
+
+**Architectural Principle:** Design your data layer before building features that depend on it.
+
+**How It Applied:**
+1. **Discovered Issue:** Computing indicators but not storing them
+2. **Root Cause:** Schema incomplete (only OHLCV, no indicators)
+3. **Solution:** Extended schema, updated data pipeline
+4. **Result:** Phase 3 can now build on stable foundation
+
+**Future Application:**
+- Before Phase 3 (Charts): Verify all data needed for charts is persisted
+- Before Phase 4 (Multi-Agent): Design message schema for agent communication
+- Before Phase 5 (Model Selection): Design schema for model performance metrics
+
+**Interview Takeaway:**
+> "I learned that data layer design cascades through product. Get your schema right early, before features depend on it. The cost of fixing schema late is exponentially higher than fixing it during verification."
 
 ## 🎯 Project Overview
 
