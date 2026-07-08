@@ -55,7 +55,27 @@
   - Consider performance implications
   - Think about maintainability and scalability
 
-### 3. Run All Tests Before Pushing
+### 3. Generate Test Cases for New Changes
+- **Mandatory for every code change:**
+  - **New Functions:** Create corresponding test file in `scripts/test_<module>.py`
+  - **Modified Functions:** Update existing test cases to cover new behavior
+  - **Test Types Required:**
+    - Positive case (expected input/output)
+    - Negative case (invalid input)
+    - Edge case (boundary conditions)
+    - Error handling (exceptions, failures)
+- **Test Template:**
+  ```python
+  def test_<function_name>():
+      # Positive case - what should work
+      # Negative case - what should fail gracefully
+      # Edge case - boundary conditions
+      # Error handling - exception cases
+  ```
+- **Explain test cases to user** before creating them
+- **Ask clarifying questions** to ensure understanding
+
+### 4. Run All Tests Before Pushing
 - **Mandatory Test Execution:**
   ```bash
   # Run all test scripts
@@ -67,7 +87,7 @@
 - If any test fails, fix the issue before proceeding
 - Document test results in the test report
 
-### 4. Generate and Update a Single Test Report
+### 5. Generate and Update a Single Test Report
 - **Test Report File:** `reports/TEST_REPORT.md`
 - **Include in every test report:**
   - Test date and time
@@ -77,7 +97,7 @@
   - Any issues found
 - **Overwrite `TEST_REPORT.md` with the latest test results** on each run
 
-### 5. Update Design Document Before Pushing
+### 6. Update Design Document Before Pushing
 - **Always update `DESIGN_DEVELOPMENT_DOCUMENT.md`** before pushing changes
 - **Update sections:**
   - Change Log (add entry with date)
@@ -87,7 +107,7 @@
   - Future Enhancements (mark completed items)
 - This ensures continuity for other AI sessions
 
-### 6. Code Best Practices
+### 7. Code Best Practices
 - **Write clean, maintainable code:**
   - Follow PEP 8 style guidelines
   - Use meaningful variable and function names
@@ -105,7 +125,7 @@
   - Use configuration over hardcoding
   - Document assumptions and limitations
 
-### 7. Always Update Lessons Learned
+### 8. Always Update Lessons Learned
 - **Document key learnings** during development in `LESSONS_LEARNED.md`
 - **Include:**
   - Technical challenges encountered and solutions
