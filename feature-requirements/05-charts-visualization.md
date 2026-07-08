@@ -60,6 +60,64 @@
   - [ ] Show volume trend
 - **Status:** Not Started
 
+## Implementation Details
+
+### Functions to Create/Modify
+- `src/charts/chart_generator.py` - Main chart generation module
+  - `generate_price_chart(df, ticker)` - Generate price trend chart with MAs
+  - `generate_rsi_chart(df, ticker)` - Generate RSI indicator chart
+  - `generate_macd_chart(df, ticker)` - Generate MACD histogram chart
+  - `generate_bb_chart(df, ticker)` - Generate Bollinger Bands chart
+  - `generate_volume_chart(df, ticker)` - Generate volume breakout chart
+
+### Code Structure
+```
+src/
+├── charts/
+│   ├── __init__.py
+│   └── chart_generator.py
+```
+
+### API Integration
+- Chainlit: `cl.image(path="chart.png")` or `cl.plotly_chart(chart)`
+- Return format: PIL Image or file path
+
+### Data Flow
+1. Fetch data from `src/fetcher/market_fetcher.py`
+2. Process with `src/analysis/trend_score.py`
+3. Generate chart with matplotlib/plotly
+4. Display in Chainlit UI
+5. Save to `data/charts/` for caching
+
+### Example Code Pattern
+```python
+def generate_price_chart(df: pd.DataFrame, ticker: str) -> str:
+    """
+    Generate price trend chart with moving averages.
+    
+    Args:
+        df: DataFrame with Open, High, Low, Close, Volume columns
+        ticker: Stock ticker symbol (e.g., "RELIANCE.NS")
+        
+    Returns:
+        Path to generated chart image (e.g., "data/charts/RELIANCE_NS_price.png")
+    """
+    import matplotlib.pyplot as plt
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(df.index, df['Close'], label='Price', color='blue')
+    ax.plot(df.index, df['MA20'], label='MA20', color='orange')
+    ax.plot(df.index, df['MA50'], label='MA50', color='red')
+    ax.set_title(f'{ticker} Price Trend')
+    ax.legend()
+    
+    chart_path = f"data/charts/{ticker.replace('.', '_')}_price.png"
+    plt.savefig(chart_path)
+    plt.close()
+    
+    return chart_path
+```
+
 ## Definition of Done
 - [ ] All sub-requirements implemented
 - [ ] Test cases for each sub-feature created
@@ -84,4 +142,3 @@
 ## Test Cases
 - `scripts/test_charts.py` - Main chart tests
 - `scripts/test_chart_rsi.py` - RSI chart specific tests
-- `scripts/test_chart_macd.py` - MACD chart specific tests

@@ -27,6 +27,43 @@
   - [ ] Criterion 3
 - **Status:** [Not Started | In Progress | Complete]
 
+## Implementation Details
+
+### Functions to Create/Modify
+- `src/[module]/[file].py` - [Description]
+  - `function_name(params)` - [Purpose]
+
+### Code Structure
+```
+src/
+├── [module]/
+│   ├── __init__.py
+│   └── [file].py
+```
+
+### API Integration
+- [List APIs to integrate with]
+
+### Data Flow
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+### Example Code Pattern
+```python
+def function_name(params) -> return_type:
+    """
+    [Function description]
+    
+    Args:
+        [param]: [description]
+        
+    Returns:
+        [description]
+    """
+    # Implementation here
+```
+
 ## Definition of Done
 - [ ] All sub-requirements implemented
 - [ ] Test cases for each sub-feature created
@@ -43,4 +80,3 @@
 - [List dependencies]
 
 ## Test Cases
-- [List test files to be created/updated]
