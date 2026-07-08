@@ -25,8 +25,10 @@ from src.fetcher.market_fetcher import fetch_indian_stock_data
 
 LOCAL_MODEL = os.getenv("LOCAL_MODEL", "llama3.2:3b")  # 2.0GB model, fast on CPU
 CLOUD_MODEL = os.getenv("CLOUD_MODEL", "gpt-4o-mini")   # Cloud fallback model
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")  # DeepSeek model
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")  # Use /api/generate for compatibility
+DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"  # DeepSeek API endpoint
 
 
 # ============================================================================
@@ -113,6 +115,52 @@ def run_cloud_llm(prompt: str) -> str:
 
 
 # -----------------------------
+# CLOUD LLM (DEEPSEEK)
+# -----------------------------
+
+def run_deepseek(prompt: str) -> str:
+    """
+    Send prompt to DeepSeek API and return the response.
+    
+    Args:
+        prompt: The text prompt to send to the LLM
+        
+    Returns:
+        str: The LLM response text, or error message if failed
+    """
+    api_key = os.getenv("DEEPSEEK_API_KEY")
+    if not api_key:
+        return "[DeepSeek Error] Missing DEEPSEEK_API_KEY"
+
+    try:
+        print("DEBUG: Sending request to DeepSeek...")
+
+        response = requests.post(
+            DEEPSEEK_URL,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": DEEPSEEK_MODEL,
+                "messages": [{"role": "user", "content": prompt}]
+            },
+            timeout=60
+        )
+
+        print("DEBUG: DeepSeek POST returned status:", response.status_code)
+
+        if response.status_code != 200:
+            return f"[DeepSeek Error] {response.text}"
+
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
+
+    except Exception as e:
+        return f"[DeepSeek Exception] {str(e)}"
+
+
+# -----------------------------
 # MAIN ENTRYPOINT
 # -----------------------------
 
@@ -160,8 +208,12 @@ Keep the tone professional, analytical, and India‑focused.
 """
 
     # ---------------------------------------------------------
-    # Run LLM (local or cloud)
+    # Run LLM (local, cloud, or deepseek)
     # ---------------------------------------------------------
+    if mode == "deepseek":
+        print("DEBUG: Calling run_deepseek() now...")
+        return run_deepseek(prompt)
+
     if mode == "cloud":
         print("DEBUG: Calling run_cloud_llm() now...")
         return run_cloud_llm(prompt)
@@ -169,8 +221,8 @@ Keep the tone professional, analytical, and India‑focused.
     print("DEBUG: Calling run_local_llama() now...")
     result = run_local_llama(prompt)
 
-    # Fallback to cloud if local fails
+    # Fallback to deepseek if local fails
     if result.startswith("[Local LLM Error]") or result.startswith("[Local LLM Exception]"):
-        return f"{result}\n\nFalling back to cloud...\n\n" + run_cloud_llm(prompt)
+        return f"{result}\n\nFalling back to DeepSeek...\n\n" + run_deepseek(prompt)
 
     return result
