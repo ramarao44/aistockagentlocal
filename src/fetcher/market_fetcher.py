@@ -19,6 +19,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 
 from src.database.crud import save_daily_record
+from src.db.database import load_symbol_resolution_cache, save_symbol_resolution_cache
 
 # Optional: cloudscraper for NSE data (bypasses Cloudflare)
 try:
@@ -30,20 +31,90 @@ except ImportError:
 # Ticker Normalization (NSE + BSE)
 # ---------------------------------------------------------
 
+TICKER_ALIASES = {
+    "HCL": "HCLTECH",
+    "HCL TECHNOLOGIES": "HCLTECH",
+    "HCL TECH": "HCLTECH",
+    "RELIANCE INDUSTRIES": "RELIANCE",
+    "STATE BANK OF INDIA": "SBIN",
+}
+
+
+def _canonical_key(value: str) -> str:
+    return re.sub(r"[^A-Z0-9]+", " ", value.upper()).strip()
+
+
+def _apply_alias(base_symbol: str) -> str:
+    return TICKER_ALIASES.get(_canonical_key(base_symbol), base_symbol)
+
+
+def _cache_key(user_input: str) -> str:
+    cleaned = user_input.strip().upper()
+    if cleaned.endswith(".NS") or cleaned.endswith(".BO"):
+        cleaned = cleaned[:-3]
+    return _canonical_key(cleaned)
+
+
+def resolve_symbol_from_web(user_input: str):
+    """Resolve free-text company input to likely Indian NSE/BSE symbols via Yahoo search API."""
+    try:
+        response = requests.get(
+            "https://query1.finance.yahoo.com/v1/finance/search",
+            params={
+                "q": user_input,
+                "quotesCount": 10,
+                "newsCount": 0,
+                "region": "IN",
+                "lang": "en-IN",
+            },
+            timeout=8,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except Exception:
+        return None
+
+    quotes = payload.get("quotes", [])
+    for quote in quotes:
+        symbol = str(quote.get("symbol", "")).upper().strip()
+        quote_type = str(quote.get("quoteType", "")).upper().strip()
+        exchange = str(quote.get("exchange", "")).upper().strip()
+
+        if not symbol or quote_type not in {"EQUITY", ""}:
+            continue
+
+        if symbol.endswith(".NS") or symbol.endswith(".BO"):
+            base = symbol[:-3]
+            return {
+                "nse": f"{base}.NS",
+                "bse": f"{base}.BO",
+            }
+
+        if exchange in {"NSI", "NSE", "BSE"}:
+            base = symbol
+            return {
+                "nse": f"{base}.NS",
+                "bse": f"{base}.BO",
+            }
+
+    return None
+
 def normalize_ticker(user_input: str):
     base = user_input.strip().upper()
+
     if base.endswith(".NS"):
-        base_name = base[:-3]
+        base_name = _apply_alias(base[:-3])
         return {
-            "nse": base,
+            "nse": f"{base_name}.NS",
             "bse": f"{base_name}.BO"
         }
     if base.endswith(".BO"):
-        base_name = base[:-3]
+        base_name = _apply_alias(base[:-3])
         return {
             "nse": f"{base_name}.NS",
-            "bse": base
+            "bse": f"{base_name}.BO"
         }
+    base = _apply_alias(base)
     return {
         "nse": f"{base}.NS",
         "bse": f"{base}.BO"
@@ -640,20 +711,65 @@ def fetch_moneycontrol_delivery(symbol: str):
 # ---------------------------------------------------------
 
 def fetch_indian_stock_data(user_input: str):
-    tickers = normalize_ticker(user_input)
+    cache_key = _cache_key(user_input)
 
-    df = fetch_price_history(tickers["nse"])
+    candidates = []
+    cached = load_symbol_resolution_cache(cache_key)
+    if cached:
+        candidates.append(({"nse": cached["nse"], "bse": cached["bse"]}, "cache"))
+
+    candidates.append((normalize_ticker(user_input), "direct"))
+
+    resolved_web = resolve_symbol_from_web(user_input)
+    if resolved_web is not None:
+        candidates.append((resolved_web, "web"))
+
+    # De-duplicate candidate pairs while preserving order.
+    deduped_candidates = []
+    seen = set()
+    for pair, source in candidates:
+        key = (pair["nse"], pair["bse"])
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped_candidates.append((pair, source))
+
+    df = None
     exchange = "NSE"
+    tickers = None
+    used_source = None
+    for pair, source in deduped_candidates:
+        df = fetch_price_history(pair["nse"])
+        if df is not None:
+            exchange = "NSE"
+            tickers = pair
+            used_source = source
+            break
 
-    if df is None:
-        df = fetch_price_history(tickers["bse"])
-        exchange = "BSE"
+        df = fetch_price_history(pair["bse"])
+        if df is not None:
+            exchange = "BSE"
+            tickers = pair
+            used_source = source
+            break
 
-    if df is None:
+    if df is None or tickers is None:
         return {
             "success": False,
             "error": f"Could not fetch data for {user_input}"
         }
+
+    if used_source != "cache":
+        try:
+            save_symbol_resolution_cache(
+                cache_key,
+                tickers["nse"],
+                tickers["bse"],
+                source=used_source or "resolved",
+            )
+        except Exception:
+            # Symbol cache is an optimization; fetch should still succeed if cache write fails.
+            pass
 
     try:
         # safe_float MUST be defined before usage

@@ -118,3 +118,10 @@ def run_cloud_llm(prompt: str) -> str:
 
 ## Test Cases
 - `scripts/test_llm_reasoning.py` - mode and fallback tests
+
+## Manual Testing
+1. Set `OPENAI_API_KEY` and `ENABLE_CLOUD_FALLBACK` in `.env`.
+2. Run a cloud report directly with `mode="cloud"` and confirm the API response is returned.
+3. Run a local report with cloud fallback enabled and temporarily break the local model path to confirm fallback works.
+4. Clear `OPENAI_API_KEY` and confirm the missing-key error is reported cleanly.
+5. Compare local and cloud output structure to confirm both produce usable stock-analysis reports.
