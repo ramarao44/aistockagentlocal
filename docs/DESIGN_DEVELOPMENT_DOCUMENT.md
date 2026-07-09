@@ -1,6 +1,6 @@
 # AI Stock Agent - Design & Development Document
 **Version:** 1.0
-**Last Updated:** 2026-07-08
+**Last Updated:** 2026-07-10
 **Status:** Living Document
 
 ---
@@ -20,6 +20,7 @@
 ---
 
 ## 📝 Change Log
+- **2026-07-10:** Refactored LLM reasoning to subprocess multi-model architecture with `local`, `optimized`, and `cloud` modes; added deterministic assertion-based reasoning tests; removed DeepSeek mode and deleted DeepSeek test script to simplify the supported runtime surface.
 - **2026-07-09:** 🔄 MAJOR UPDATE - Phase 2 Audit Complete. Fixed 3 critical issues: (1) Added 13 indicator columns to database schema (was 0% implemented), (2) Extended data fetch from 6mo to 1y to enable MA200 calculation, (3) Improved delivery volume error handling. Phase 2 real completion updated from 62.5% → 87.5%. Comprehensive audit report in docs/AUDIT_REPORT_2026_07_09.md. All technical indicators (RSI, MACD, MA20/50/200, ADX, Bollinger Bands) now persist to database and are Phase 3-ready for visualization.
   - **Interview Prep Created:** AI_PM_INTERVIEW_PREP.md documents 7 STAR stories extracted from audit experience. All documentation updated with cross-references to create cohesive learning ecosystem.
   - **Architectural Lessons:** See "Architectural Decision Trade-offs" section below for insights into schema design, data pipeline constraints, and error handling patterns.
@@ -251,9 +252,10 @@ aistockagentlocal/
 
 #### `src/reasoning/llm_reasoner.py`
 Main LLM integration module. Handles:
-- Local LLM calls via Ollama
+- Local LLM calls via Ollama subprocess (`ollama run <model>`)
 - Cloud LLM calls via OpenAI
-- Report generation with real market data
+- Mode-aware report generation with real market data (`local`, `optimized`, `cloud`)
+- Fallback from local to cloud when enabled
 
 #### `src/reasoning/reasoning_node.py`
 Report generation utilities:
@@ -361,15 +363,18 @@ Logging utilities:
 **Purpose:** Generate AI-powered stock analysis report
 **Parameters:**
 - `ticker` - Stock symbol
-- `mode` - "local" (Ollama) or "cloud" (OpenAI)
+- `mode` - `local` (full quality), `optimized` (compact output), or `cloud` (cloud only)
 **Returns:** Full text report with sections:
-- Price Trend Summary
-- Technical Indicators Interpretation
-- Market Sentiment
-- Risks (India-specific)
-- Opportunities (India-specific)
-- Final Recommendation
-- Next Steps
+- Summary
+- Quick Sentiment
+- Trend Score Logic
+
+#### `run_model(model: str, prompt: str) -> str`
+**Location:** `src/reasoning/llm_reasoner.py`
+**Purpose:** Execute local LLM through subprocess
+**Behavior:**
+- Calls `ollama run <model>`
+- Returns normalized local error markers for non-zero exit, timeout, missing command, or empty output
 
 #### `compute_trend_score(data: dict) -> float`
 **Location:** `src/analysis/trend_score.py`
@@ -535,16 +540,22 @@ GMAIL_USER=ramarao.mundruai@gmail.com
 GMAIL_PASS=your_app_password_here
 N8N_WEBHOOK_URL=http://localhost:8000/report
 OPENAI_API_KEY=sk-... (optional, for cloud mode)
+MAIN_LLM_MODEL=qwen2.5:3b
+FAST_LLM_MODEL=llama3.2:3b
+LOGIC_LLM_MODEL=phi3:3.8b
+ENABLE_CLOUD_FALLBACK=1
 ```
 
 ### Ollama Configuration
-- **URL:** `http://localhost:11434/api/generate`
-- **Default Model:** `llama3.2:3b`
+- **Execution:** `ollama run <model>` (subprocess)
+- **Default Models:**
+    - `qwen2.5:3b` - primary summary reasoning
+    - `llama3.2:3b` - fast/optimized sentiment path
+    - `phi3:3.8b` - trend-logic explanation
 - **Available Models:**
-  - `llama3.2:3b` (2.0 GB) - Primary
-  - `phi3.5:latest` (2.1 GB) - Alternative
-  - `mistral:7b` (4.4 GB) - High quality
-  - `deepseek-r1:latest` (5.2 GB) - Reasoning
+    - `qwen2.5:3b`
+    - `llama3.2:3b`
+    - `phi3:3.8b`
 
 ---
 
@@ -567,8 +578,18 @@ Tests database operations:
 
 #### `scripts/test_llm_reasoning.py`
 Tests LLM integration:
-- Calls `generate_llm_report()`
-- Returns full AI analysis
+- Validates standard mode output structure
+- Validates optimized mode routing
+- Validates local failure cloud fallback
+- Validates missing API key behavior
+
+#### `scripts/test_reasoning.py`
+Tests reasoning composition:
+- Validates combined deterministic report
+- Validates optimized LLM mode path
+
+#### `scripts/test_ai_report.py`
+Tests AI report persistence + optimized mode generation check
 
 ### Running Tests
 ```bash
@@ -576,9 +597,9 @@ Tests LLM integration:
 .venv\Scripts\activate
 
 # Run all tests
-python -m scripts.test_mvp
-python -m scripts.test_db
 python -m scripts.test_llm_reasoning
+python -m scripts.test_reasoning
+python -m scripts.test_ai_report
 
 # Run Chainlit UI
 chainlit run app.py
@@ -601,8 +622,9 @@ python -m venv .venv
 pip install -r requirements.txt
 
 # 3. Install Ollama models
+ollama pull qwen2.5:3b
 ollama pull llama3.2:3b
-ollama pull phi3.5
+ollama pull phi3:3.8b
 
 # 4. Run application
 chainlit run app.py

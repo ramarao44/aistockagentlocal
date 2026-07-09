@@ -2,48 +2,48 @@
 
 ## User Story
 - **As a** user
-- **I want** to use free cloud LLMs for analysis
-- **So that** I can get fast responses without local hardware
+- **I want** a cloud fallback for analysis
+- **So that** I can still get results when local models fail
 
 ## Sub-Requirements
 
-### 6.1 DeepSeek API Integration
+### 6.1 OpenAI Cloud Integration
 - **As a** developer
-- **I want** to integrate DeepSeek API
-- **So that** I can use free cloud inference
+- **I want** to integrate OpenAI API as cloud fallback
+- **So that** report generation remains available if local execution fails
 - **Acceptance Criteria:**
-  - [x] Add DeepSeek API key to .env
-  - [x] Create `run_deepseek()` function
-  - [x] Handle API errors gracefully
-  - [x] Support 10M tokens/day free tier
+  - [x] Add OpenAI API key support in `.env`
+  - [x] Create `run_cloud_llm()` function
+  - [x] Handle API and missing-key errors gracefully
+  - [x] Use configurable cloud model
 
 ### 6.2 Model Selection
 - **As a** user
 - **I want** to choose between local and cloud
 - **So that** I can balance privacy and speed
 - **Acceptance Criteria:**
-  - [ ] Add `mode` parameter to LLM functions
-  - [ ] Default to "local" for privacy
-  - [ ] Allow "cloud" for speed
-  - [ ] Document the choice in UI
-- **Status:** Not Started
+  - [x] Add `mode` parameter to LLM functions
+  - [x] Default to `local` for privacy
+  - [x] Allow `cloud` mode
+  - [x] Document the choice in UI
+- **Status:** Complete
 
 ### 6.3 Fallback Mechanism
 - **As a** system
 - **I want** automatic fallback to local
 - **So that** I can ensure availability
 - **Acceptance Criteria:**
-  - [ ] Try cloud first
-  - [ ] Fall back to local on failure
-  - [ ] Log fallback events
-  - [ ] Return error if both fail
-- **Status:** Not Started
+  - [x] Try local first
+  - [x] Fall back to cloud on local failure when enabled
+  - [x] Return cloud error if fallback cannot complete
+  - [x] Return local error if fallback is disabled
+- **Status:** Complete
 
 ## Implementation Details
 
 ### Functions to Create/Modify
 - `src/reasoning/llm_reasoner.py` - LLM integration
-  - `run_deepseek(prompt: str)` - Call DeepSeek API
+  - `run_cloud_llm(prompt: str)` - Call OpenAI API
   - `generate_llm_report(ticker: str, mode: str)` - Updated with mode parameter
 
 ### Code Structure
@@ -54,48 +54,33 @@ src/
 ```
 
 ### API Integration
-- DeepSeek: `https://api.deepseek.com/v1/chat/completions`
-- Headers: `Authorization: Bearer {DEEPSEEK_API_KEY}`
-- Model: `deepseek-chat`
+- OpenAI Chat Completions API via `openai.ChatCompletion.create()`
+- Headers/auth managed by OpenAI SDK with `OPENAI_API_KEY`
+- Model from `CLOUD_MODEL` environment variable (default: `gpt-4o-mini`)
 
 ### Data Flow
 1. User requests analysis
 2. Check mode (local/cloud)
-3. If cloud: Call DeepSeek API
-4. If local: Call Ollama
-5. Return generated report
+3. If cloud mode: Call OpenAI API
+4. If local mode: Call Ollama models
+5. On local failure, use cloud fallback if enabled
+6. Return generated report
 
 ### Example Code Pattern
 ```python
-def run_deepseek(prompt: str) -> str:
-    """
-    Call DeepSeek API for analysis.
-    
-    Args:
-        prompt: Analysis prompt with market data
-        
-    Returns:
-        Generated analysis text
-    """
-    import requests
-    
-    headers = {
-        "Authorization": f"Bearer {os.getenv('DEEPSEEK_API_KEY')}",
-        "Content-Type": "application/json"
-    }
-    
-    data = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}]
-    }
-    
-    response = requests.post(
-        "https://api.deepseek.com/v1/chat/completions",
-        headers=headers,
-        json=data
-    )
-    
-    return response.json()["choices"][0]["message"]["content"]
+def run_cloud_llm(prompt: str) -> str:
+  api_key = os.getenv("OPENAI_API_KEY")
+  if not api_key:
+    return "[Cloud LLM Error] Missing OPENAI_API_KEY"
+
+  import openai
+  openai.api_key = api_key
+
+  completion = openai.ChatCompletion.create(
+    model=os.getenv("CLOUD_MODEL", "gpt-4o-mini"),
+    messages=[{"role": "user", "content": prompt}],
+  )
+  return completion.choices[0].message["content"]
 ```
 
 ## Source Code Flow Chart
@@ -105,9 +90,9 @@ def run_deepseek(prompt: str) -> str:
         v
 [Check mode: "local" or "cloud"]
         |
-        +---> [cloud] --> [run_deepseek()] --> [API Response]
+  +---> [cloud] --> [run_cloud_llm()] --> [API Response]
         |
-        +---> [local] --> [run_local_llama()] --> [Local Response]
+  +---> [local] --> [run_model()/main_reasoning()] --> [Local Response]
         |
         v
 [Return: analysis report]
@@ -123,14 +108,13 @@ def run_deepseek(prompt: str) -> str:
 - [ ] Changes pushed to repository
 
 ## Technical Notes
-- DeepSeek free tier: 10M tokens/day
-- Keep Ollama as fallback
-- Add rate limiting if needed
+- OpenAI is cloud fallback path only
+- Local Ollama remains primary for privacy
+- Fallback behavior can be controlled with `ENABLE_CLOUD_FALLBACK`
 
 ## Dependencies
-- requests
+- openai
 - python-dotenv
 
 ## Test Cases
-- `scripts/test_deepseek.py` - DeepSeek API tests
-- `scripts/test_llm_reasoning.py` - Updated LLM tests
+- `scripts/test_llm_reasoning.py` - mode and fallback tests

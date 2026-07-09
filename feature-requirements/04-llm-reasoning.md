@@ -7,14 +7,15 @@
 
 ## Sub-Requirements
 
-### 4.1 Local LLM Integration
+### 4.1 Local LLM Integration (Subprocess-based)
 - **As a** privacy-focused user
-- **I want** to use local LLMs
-- **So that** my data stays private
+- **I want** to use local LLMs via subprocess
+- **So that** my data stays private and integration is simpler
 - **Acceptance Criteria:**
-  - [x] Integrate with Ollama
-  - [x] Support llama3.2:3b model
-  - [x] Support phi3.5 model
+  - [x] Integrate with Ollama via subprocess
+  - [x] Support qwen2.5:3b model for main reasoning
+  - [x] Support llama3.2:3b model for fast reasoning
+  - [x] Support phi3:3.8b model for logic reasoning
   - [x] Return analysis report
 - **Status:** Complete
 
@@ -50,12 +51,29 @@
   - [x] Include all indicators in prompt
 - **Status:** Complete
 
+### 4.5 Token Optimization Mode
+- **As a** performance-focused user
+- **I want** a compact reasoning mode
+- **So that** I can reduce latency and output size while preserving decision quality
+- **Acceptance Criteria:**
+  - [x] Support `mode="optimized"` in `generate_llm_report()`
+  - [x] Use compact prompts for optimized mode
+  - [x] Reuse fast model path for low-latency summaries
+  - [x] Keep core sections: summary, sentiment, trend logic
+- **Status:** Complete
+
 ## Implementation Details
 
 ### Functions to Create/Modify
 - `src/reasoning/llm_reasoner.py` - LLM integration
-  - `run_local_llama(prompt: str)` - Call Ollama
-  - `run_cloud_llm(prompt: str)` - Call OpenAI
+  - `run_model(model: str, prompt: str)` - Call Ollama via subprocess
+  - `main_reasoning(prompt: str)` - Use qwen2.5:3b for main analysis
+  - `fast_reasoning(prompt: str)` - Use llama3.2:3b for fast sentiment
+  - `logic_reasoning(prompt: str)` - Use phi3:3.8b for logic analysis
+  - `generate_ai_summary(data: dict)` - Generate stock analysis summary
+  - `quick_sentiment(data: dict)` - Generate sentiment classification
+  - `explain_trend_score(data: dict)` - Explain trend score
+  - `run_cloud_llm(prompt: str)` - Call OpenAI (fallback)
   - `generate_llm_report(ticker: str, mode: str)` - Generate report
 
 ### Code Structure
@@ -65,48 +83,63 @@ src/
     └── llm_reasoner.py
 ```
 
-### API Integration
-- Ollama: `http://localhost:11434/api/generate`
-- OpenAI: `openai.ChatCompletion.create()`
+### Integration Method
+- **Ollama: subprocess-based (`ollama run <model>`)** - Direct CLI integration
+- **OpenAI: HTTP API (`openai.ChatCompletion.create()`)** - Cloud fallback
 
 ### Data Flow
 1. Fetch market data
 2. Build prompt with real data
-3. Call local LLM (or cloud)
-4. Return generated report
-5. Display in Chainlit
+3. Call subprocess LLM (`run_model(model, prompt)`)
+4. For optimized mode, use compact prompts and fast-model routing
+5. Return generated report
+6. Display in Chainlit
 
 ### Example Code Pattern
 ```python
-def generate_llm_report(ticker: str, mode: str = "local") -> str:
-    """
-    Generate AI stock analysis report.
-    
-    Args:
-        ticker: Stock ticker symbol
-        mode: "local" or "cloud"
-        
-    Returns:
-        Generated analysis report
-    """
-    market_data = fetch_indian_stock_data(ticker)
-    
+import subprocess
+
+def run_model(model, prompt):
+    """Call Ollama model via subprocess CLI."""
+    result = subprocess.run(
+        ["ollama", "run", model],
+        input=prompt.encode(),
+        capture_output=True
+    )
+    return result.stdout.decode().strip()
+
+def main_reasoning(prompt):
+    return run_model("qwen2.5:3b", prompt)
+
+def fast_reasoning(prompt):
+    return run_model("llama3.2:3b", prompt)
+
+def logic_reasoning(prompt):
+    return run_model("phi3:3.8b", prompt)
+
+def generate_ai_summary(data):
     prompt = f"""
-    You are an AI financial analyst specializing in Indian stock markets.
-    Use ONLY the REAL market data provided below.
-    
-    REAL MARKET DATA:
-    - Ticker: {market_data['ticker']}
-    - Current Price: {market_data['current_price']}
-    - RSI (14): {market_data['rsi']}
-    - MA50: {market_data['ma50']}
-    ...
+    Provide a clear reasoning summary for this stock:
+
+    {data}
     """
-    
-    if mode == "local":
-        return run_local_llama(prompt)
-    else:
-        return run_cloud_llm(prompt)
+    return main_reasoning(prompt)
+
+def quick_sentiment(data):
+    prompt = f"""
+    Classify sentiment (bullish/bearish/neutral) for this stock:
+
+    {data}
+    """
+    return fast_reasoning(prompt)
+
+def explain_trend_score(data):
+    prompt = f"""
+    Explain the trend score logically:
+
+    {data}
+    """
+    return logic_reasoning(prompt)
 ```
 
 ## Source Code Flow Chart
@@ -120,7 +153,7 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
 [Build Prompt with real data]
         |
         v
-[run_local_llama() or run_cloud_llm()]
+[run_model() via subprocess]
         |
         v
 [LLM Response: analysis text]
@@ -139,16 +172,25 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
 - [x] Changes pushed to repository
 
 ## Technical Notes
-- Use /api/generate endpoint (not /api/chat)
-- 120-second timeout for large models
+- Use subprocess CLI approach (no HTTP server needed)
+- Supports multiple models for different use cases:
+  - `qwen2.5:3b` - Main reasoning (highest quality)
+  - `llama3.2:3b` - Fast reasoning (speed optimized)
+  - `phi3:3.8b` - Logic reasoning (mathematical analysis)
+- Supported modes in `generate_llm_report()`:
+  - `local` / `default` - Full quality report
+  - `optimized` - Compact output, faster reasoning path
+  - `cloud` - Force cloud-only generation
+- No API key required for local models
 - Fallback to cloud on local failure
 
 ## Dependencies
-- requests
-- openai (optional)
-- ollama
+- No HTTP dependencies required for subprocess approach
+- openai (optional) - For cloud fallback
+- subprocess (standard library) - Included in Python
 
 ## Test Cases
 - `scripts/test_llm_reasoning.py` - LLM tests
 - `scripts/test_reasoning.py` - Reasoning tests
 - `scripts/test_ai_report.py` - Report generation tests
+- Tests validate standard mode, optimized mode, and cloud fallback behavior
