@@ -1,95 +1,77 @@
-"""
-LLM Reasoner Module - AI Stock Agent
-
-This module handles LLM integration for generating stock analysis reports.
-Supports both local (Ollama) and cloud (OpenAI) LLM providers.
-
-Author: AI Stock Agent Team
-Version: 1.0
-Last Updated: 2026-07-07
-"""
+"""LLM reasoning orchestration for stock analysis reports."""
 
 import os
-
-import requests
+import subprocess
+import importlib
+from typing import Any, cast
 
 from src.fetcher.market_fetcher import fetch_indian_stock_data
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-# These settings control which LLM models to use and their endpoints.
-# LOCAL_MODEL: Used for local inference via Ollama (recommended for privacy)
-# CLOUD_MODEL: Used for cloud inference via OpenAI (requires API key)
-# OLLAMA_URL: Local Ollama API endpoint (default: localhost:11434)
-
-LOCAL_MODEL = os.getenv("LOCAL_MODEL", "llama3.2:3b")  # 2.0GB model, fast on CPU
-CLOUD_MODEL = os.getenv("CLOUD_MODEL", "gpt-4o-mini")   # Cloud fallback model
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")  # DeepSeek model
-
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")  # Use /api/generate for compatibility
-DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions"  # DeepSeek API endpoint
+MAIN_MODEL = os.getenv("MAIN_LLM_MODEL", "qwen2.5:3b")
+FAST_MODEL = os.getenv("FAST_LLM_MODEL", "llama3.2:3b")
+LOGIC_MODEL = os.getenv("LOGIC_LLM_MODEL", "phi3:3.8b")
+CLOUD_MODEL = os.getenv("CLOUD_MODEL", "gpt-4o-mini")
 
 
-# ============================================================================
-# LOCAL LLM (OLLAMA)
-# ============================================================================
-# Ollama provides a simple HTTP API for running LLMs locally.
-# Benefits: Privacy-preserving, no API costs, works offline
-# Note: Use /api/generate endpoint (not /api/chat) for broader model compatibility
+def _safe_get(data: dict, key: str, default: str = "N/A"):
+    value = data.get(key)
+    if value is None:
+        return default
+    return value
 
-def run_local_llama(prompt: str) -> str:
-    """
-    Send prompt to local Ollama LLM and return the response.
-    
-    Args:
-        prompt: The text prompt to send to the LLM
-        
-    Returns:
-        str: The LLM response text, or error message if failed
-        
-    Raises:
-        No exceptions raised - errors are returned as strings
-    """
-    print("DEBUG: Using model:", LOCAL_MODEL)
 
+def _build_market_snapshot(data: dict) -> str:
+    return (
+        f"Ticker: {_safe_get(data, 'ticker')}\n"
+        f"Exchange: {_safe_get(data, 'exchange')}\n"
+        f"Current Price: {_safe_get(data, 'current_price')}\n"
+        f"RSI(14): {_safe_get(data, 'rsi')}\n"
+        f"MA50: {_safe_get(data, 'ma50')}\n"
+        f"MA200: {_safe_get(data, 'ma200')}\n"
+        f"Bollinger Upper: {_safe_get(data, 'bollinger_upper')}\n"
+        f"Bollinger Lower: {_safe_get(data, 'bollinger_lower')}\n"
+        f"Last Updated: {_safe_get(data, 'last_updated')}"
+    )
+
+
+def run_model(model: str, prompt: str) -> str:
+    """Call a local Ollama model via subprocess CLI."""
     try:
-        print("DEBUG: Sending request to Ollama...")
-
-        response = requests.post(
-            OLLAMA_URL,
-            json={
-                "model": LOCAL_MODEL,
-                "prompt": prompt,
-                "stream": False  # Set to True for streaming responses
-            },
-            timeout=120  # 2-minute timeout for large models
+        result = subprocess.run(
+            ["ollama", "run", model],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
         )
+        if result.returncode != 0:
+            detail = (result.stderr or "unknown error").strip()
+            return f"[Local LLM Error] model={model} detail={detail}"
 
-        print("DEBUG: Ollama POST returned status:", response.status_code)
-
-        data = response.json()
-        print("DEBUG: Ollama response:", data)
-
-        # Handle different response formats from Ollama
-        if "response" in data:
-            return data["response"]
-
-        if "output" in data:
-            return data["output"]
-
-        if "error" in data:
-            return f"[Local LLM Error] {data['error']}"
-
-        return str(data)
-
-    except Exception as e:
-        return f"[Local LLM Exception] {str(e)}"
+        output = (result.stdout or "").strip()
+        if not output:
+            return f"[Local LLM Error] model={model} returned empty output"
+        return output
+    except FileNotFoundError:
+        return "[Local LLM Error] 'ollama' command not found"
+    except subprocess.TimeoutExpired:
+        return f"[Local LLM Error] model={model} timed out"
+    except Exception as exc:
+        return f"[Local LLM Exception] {exc}"
 
 
-# -----------------------------
-# CLOUD LLM (OPENAI / AZURE)
-# -----------------------------
+def main_reasoning(prompt: str) -> str:
+    return run_model(MAIN_MODEL, prompt)
+
+
+def fast_reasoning(prompt: str) -> str:
+    return run_model(FAST_MODEL, prompt)
+
+
+def logic_reasoning(prompt: str) -> str:
+    return run_model(LOGIC_MODEL, prompt)
+
 
 def run_cloud_llm(prompt: str) -> str:
     api_key = os.getenv("OPENAI_API_KEY")
@@ -97,132 +79,115 @@ def run_cloud_llm(prompt: str) -> str:
         return "[Cloud LLM Error] Missing OPENAI_API_KEY"
 
     try:
-        import openai
+        openai_client = cast(Any, importlib.import_module("openai"))
 
-        openai.api_key = api_key
-
-        completion = openai.ChatCompletion.create(
+        openai_client.api_key = api_key
+        completion = openai_client.ChatCompletion.create(
             model=CLOUD_MODEL,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
         )
-
         return completion.choices[0].message["content"]
-
     except ImportError:
         return "[Cloud LLM Error] openai package is not installed"
-    except Exception as e:
-        return f"[Cloud LLM Exception] {str(e)}"
+    except Exception as exc:
+        return f"[Cloud LLM Exception] {exc}"
 
 
-# -----------------------------
-# CLOUD LLM (DEEPSEEK)
-# -----------------------------
-
-def run_deepseek(prompt: str) -> str:
-    """
-    Send prompt to DeepSeek API and return the response.
-    
-    Args:
-        prompt: The text prompt to send to the LLM
-        
-    Returns:
-        str: The LLM response text, or error message if failed
-    """
-    api_key = os.getenv("DEEPSEEK_API_KEY")
-    if not api_key:
-        return "[DeepSeek Error] Missing DEEPSEEK_API_KEY"
-
-    try:
-        print("DEBUG: Sending request to DeepSeek...")
-
-        response = requests.post(
-            DEEPSEEK_URL,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": DEEPSEEK_MODEL,
-                "messages": [{"role": "user", "content": prompt}]
-            },
-            timeout=60
+def generate_ai_summary(data: dict, optimized: bool = False) -> str:
+    market_snapshot = _build_market_snapshot(data)
+    if optimized:
+        prompt = (
+            "You are an Indian stock analyst. Return concise output in <=120 words.\n"
+            "Sections: Trend, Indicators, Risks, Recommendation.\n"
+            f"Data:\n{market_snapshot}"
         )
+        return fast_reasoning(prompt)
 
-        print("DEBUG: DeepSeek POST returned status:", response.status_code)
-
-        if response.status_code != 200:
-            return f"[DeepSeek Error] {response.text}"
-
-        data = response.json()
-        return data["choices"][0]["message"]["content"]
-
-    except Exception as e:
-        return f"[DeepSeek Exception] {str(e)}"
+    prompt = (
+        "You are an AI financial analyst specializing in Indian stock markets (NSE/BSE).\n"
+        "Use only provided data. Provide: Price Trend Summary, Technical Indicator Interpretation, "
+        "Market Sentiment, Risks, Opportunities, Final Recommendation, Next Steps.\n"
+        f"Data:\n{market_snapshot}"
+    )
+    return main_reasoning(prompt)
 
 
-# -----------------------------
-# MAIN ENTRYPOINT
-# -----------------------------
+def quick_sentiment(data: dict, optimized: bool = False) -> str:
+    market_snapshot = _build_market_snapshot(data)
+    if optimized:
+        prompt = (
+            "Classify as Bullish/Bearish/Neutral. Provide one-line reason in <=25 words.\n"
+            f"Data:\n{market_snapshot}"
+        )
+    else:
+        prompt = (
+            "Classify sentiment as Bullish, Bearish, or Neutral using the stock data and explain briefly.\n"
+            f"Data:\n{market_snapshot}"
+        )
+    return fast_reasoning(prompt)
+
+
+def explain_trend_score(data: dict, optimized: bool = False) -> str:
+    market_snapshot = _build_market_snapshot(data)
+    if optimized:
+        prompt = (
+            "Explain trend logic in <=80 words with 2 bullets: why score is strong/weak and key risk.\n"
+            f"Data:\n{market_snapshot}"
+        )
+    else:
+        prompt = (
+            "Explain trend-score logic with technical reasoning and risk factors.\n"
+            f"Data:\n{market_snapshot}"
+        )
+    return logic_reasoning(prompt)
+
+
+def _is_error_response(text: str) -> bool:
+    return text.startswith("[Local LLM Error]") or text.startswith("[Local LLM Exception]")
+
 
 def generate_llm_report(ticker: str, mode: str = "local") -> str:
-    print("DEBUG: generate_llm_report called with mode =", mode)
+    """Generate report for a ticker using local models with optional cloud fallback.
 
-    # ---------------------------------------------------------
-    # Fetch REAL Indian stock data (NSE + BSE)
-    # ---------------------------------------------------------
+    Supported modes:
+    - local/default: full report
+    - optimized: compact report for token/latency savings
+    - cloud: force cloud report
+    """
+    mode_value = (mode or "local").strip().lower()
     market_data = fetch_indian_stock_data(ticker)
 
-    if not market_data["success"]:
-        return f"Error fetching market data: {market_data['error']}"
+    if not market_data.get("success"):
+        return f"Error fetching market data: {market_data.get('error', 'Unknown error')}"
 
-    print("DEBUG: Market data fetched:", market_data)
+    if mode_value == "cloud":
+        full_prompt = (
+            "Generate a structured Indian stock analysis report with sections: "
+            "Price Trend, Technical Indicators, Sentiment, Risks, Opportunities, Recommendation, Next Steps.\n"
+            f"Data:\n{_build_market_snapshot(market_data)}"
+        )
+        return run_cloud_llm(full_prompt)
 
-    # ---------------------------------------------------------
-    # Build prompt using REAL data
-    # ---------------------------------------------------------
-    prompt = f"""
-You are an AI financial analyst specializing in Indian stock markets (NSE/BSE).
-Use ONLY the REAL market data provided below to generate the analysis.
+    optimized = mode_value in {"optimized", "token_optimized", "token-optimized", "fast"}
 
-REAL MARKET DATA:
-- Ticker: {market_data['ticker']}
-- Exchange: {market_data['exchange']}
-- Current Price: {market_data['current_price']}
-- RSI (14): {market_data['rsi']}
-- MA50: {market_data['ma50']}
-- MA200: {market_data['ma200']}
-- Bollinger Upper: {market_data['bollinger_upper']}
-- Bollinger Lower: {market_data['bollinger_lower']}
-- Last Updated: {market_data['last_updated']}
+    summary = generate_ai_summary(market_data, optimized=optimized)
+    if _is_error_response(summary):
+        if os.getenv("ENABLE_CLOUD_FALLBACK", "1") == "1":
+            return run_cloud_llm(
+                "Local model failed. Provide concise Indian stock analysis from this data:\n"
+                f"{_build_market_snapshot(market_data)}"
+            )
+        return summary
 
-Generate a structured, concise Indian stock analysis report including:
-1. Price Trend Summary
-2. Technical Indicators Interpretation
-3. Market Sentiment (general)
-4. Risks (India-specific)
-5. Opportunities (India-specific)
-6. Final Recommendation (Buy/Hold/Sell)
-7. Next Steps for the Investor
+    sentiment = quick_sentiment(market_data, optimized=optimized)
+    trend_logic = explain_trend_score(market_data, optimized=optimized)
 
-Keep the tone professional, analytical, and India‑focused.
-"""
-
-    # ---------------------------------------------------------
-    # Run LLM (local, cloud, or deepseek)
-    # ---------------------------------------------------------
-    if mode == "deepseek":
-        print("DEBUG: Calling run_deepseek() now...")
-        return run_deepseek(prompt)
-
-    if mode == "cloud":
-        print("DEBUG: Calling run_cloud_llm() now...")
-        return run_cloud_llm(prompt)
-
-    print("DEBUG: Calling run_local_llama() now...")
-    result = run_local_llama(prompt)
-
-    # Fallback to deepseek if local fails
-    if result.startswith("[Local LLM Error]") or result.startswith("[Local LLM Exception]"):
-        return f"{result}\n\nFalling back to DeepSeek...\n\n" + run_deepseek(prompt)
-
-    return result
+    return (
+        f"AI Stock Report ({'Optimized' if optimized else 'Standard'}) for {market_data.get('ticker', ticker)}\n\n"
+        "1. Summary\n"
+        f"{summary}\n\n"
+        "2. Quick Sentiment\n"
+        f"{sentiment}\n\n"
+        "3. Trend Score Logic\n"
+        f"{trend_logic}"
+    )

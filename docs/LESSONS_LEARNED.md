@@ -182,6 +182,13 @@ That document contains:
 
 ## 🔧 Technical Lessons
 
+### 0. Reduce Modes to Reduce Operational Risk (2026-07-10)
+**Problem:** Multiple cloud mode variants increased maintenance and test surface area.
+
+**Solution:** Standardized active reasoning modes to `local`, `optimized`, and `cloud`; removed DeepSeek mode and deleted its dedicated test script.
+
+**Key Takeaway:** Fewer supported execution paths improve reliability, simplify documentation, and reduce regression risk.
+
 ---
 
 ## 🔧 Library Compatibility Issues

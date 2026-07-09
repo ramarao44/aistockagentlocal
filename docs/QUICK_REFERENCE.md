@@ -1,6 +1,6 @@
 # Quick Reference - AI Stock Agent
 
-**Last Updated:** 2026-07-07
+**Last Updated:** 2026-07-10
 
 ---
 
@@ -62,10 +62,15 @@ curl http://localhost:11434/api/tags
 
 | Model | Size | Use Case |
 |-------|------|----------|
-| `llama3.2:3b` | 2.0 GB | Primary (fast, good quality) |
-| `phi3.5` | 2.1 GB | Alternative (fast, good reasoning) |
-| `mistral:7b` | 4.4 GB | High quality |
-| `deepseek-r1` | 5.2 GB | Reasoning tasks |
+| `qwen2.5:3b` | ~2 GB | Main summary reasoning |
+| `llama3.2:3b` | 2.0 GB | Fast/optimized sentiment path |
+| `phi3:3.8b` | ~2.3 GB | Trend logic explanation |
+
+### Supported LLM Modes
+
+- `local` - standard local report path
+- `optimized` - compact low-latency report path
+- `cloud` - OpenAI cloud path (fallback/forced)
 
 ---
 
