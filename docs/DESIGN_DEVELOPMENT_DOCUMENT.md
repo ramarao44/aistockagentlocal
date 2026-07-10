@@ -20,9 +20,7 @@
 ---
 
 ## 📝 Change Log
-- **2026-07-10:** Added symbol resolution cache and web lookup fallback in market fetcher to resolve free-text company inputs and persist resolved NSE/BSE pairs; added Windows-safe UTF-8 subprocess decoding for local LLM execution to avoid cp932 decode failures.
-- **2026-07-10:** Refactored LLM reasoning to subprocess multi-model architecture with `local`, `optimized`, and `cloud` modes; added deterministic assertion-based reasoning tests; removed DeepSeek mode and deleted DeepSeek test script to simplify the supported runtime surface.
-- **2026-07-09:** 🔄 MAJOR UPDATE - Phase 2 Audit Complete. Fixed 3 critical issues: (1) Added 13 indicator columns to database schema (was 0% implemented), (2) Extended data fetch from 6mo to 1y to enable MA200 calculation, (3) Improved delivery volume error handling. Phase 2 real completion updated from 62.5% → 87.5%. Comprehensive audit report in docs/AUDIT_REPORT_2026_07_09.md. All technical indicators (RSI, MACD, MA20/50/200, ADX, Bollinger Bands) now persist to database and are Phase 3-ready for visualization.
+- **2026-07-10:** Fixed h11 LocalProtocolError in Chainlit app by using `asyncio.to_thread()` for non-blocking LLM calls - prevents HTTP connection errors when running multiple subprocess-based LLM calls; added comprehensive debug prints to trace LLM operations; added timeout configuration to Chainlit config (300s server timeout, 120s subprocess timeout).
   - **Interview Prep Created:** AI_PM_INTERVIEW_PREP.md documents 7 STAR stories extracted from audit experience. All documentation updated with cross-references to create cohesive learning ecosystem.
   - **Architectural Lessons:** See "Architectural Decision Trade-offs" section below for insights into schema design, data pipeline constraints, and error handling patterns.
 - 2026-07-08: Added repo safety layers - created PUSH_CHECKLIST.md and .githooks/pre-push for automated validation. Protects against pushing without tests, accidental .env commits, and large files. Ensures all AI agents follow discipline before pushing.

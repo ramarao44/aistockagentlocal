@@ -1,4 +1,5 @@
 import chainlit as cl
+import asyncio
 from src.reasoning.llm_reasoner import generate_llm_report
 
 @cl.on_chat_start
@@ -34,9 +35,6 @@ async def main(message: cl.Message):
         content=f"🔍 Generating report for **{ticker}** using **{mode}** mode..."
     ).send()
 
-    # Call your reasoning engine
-    
-    report = generate_llm_report(ticker, mode=mode)
+    # Call your reasoning engine in a thread pool to avoid blocking the event loop
+    report = await asyncio.to_thread(generate_llm_report, ticker, mode=mode)
     await cl.Message(content=report).send()
-
-

@@ -3,6 +3,7 @@
 import os
 import subprocess
 import importlib
+import time
 from typing import Any, cast
 
 from src.fetcher.market_fetcher import fetch_indian_stock_data
@@ -36,6 +37,9 @@ def _build_market_snapshot(data: dict) -> str:
 
 def run_model(model: str, prompt: str) -> str:
     """Call a local Ollama model via subprocess CLI."""
+    print(f"[DEBUG] run_model called - model={model}, prompt_length={len(prompt)}")
+    start_time = time.time()
+    
     try:
         result = subprocess.run(
             ["ollama", "run", model],
@@ -47,37 +51,54 @@ def run_model(model: str, prompt: str) -> str:
             timeout=120,
             check=False,
         )
+        
+        elapsed = time.time() - start_time
+        print(f"[DEBUG] run_model completed - model={model}, elapsed={elapsed:.2f}s, returncode={result.returncode}")
+        
         if result.returncode != 0:
             detail = (result.stderr or "unknown error").strip()
+            print(f"[DEBUG] LLM error - stderr={detail[:100]}")
             return f"[Local LLM Error] model={model} detail={detail}"
 
         output = (result.stdout or "").strip()
         if not output:
+            print(f"[DEBUG] LLM returned empty output")
             return f"[Local LLM Error] model={model} returned empty output"
+        
+        print(f"[DEBUG] LLM success - output_length={len(output)}")
         return output
+        
     except FileNotFoundError:
+        print(f"[DEBUG] LLM FileNotFoundError - ollama command not found")
         return "[Local LLM Error] 'ollama' command not found"
     except subprocess.TimeoutExpired:
+        print(f"[DEBUG] LLM TimeoutExpired - model={model}")
         return f"[Local LLM Error] model={model} timed out"
     except Exception as exc:
+        print(f"[DEBUG] LLM Exception - {type(exc).__name__}: {exc}")
         return f"[Local LLM Exception] {exc}"
 
 
 def main_reasoning(prompt: str) -> str:
+    print(f"[DEBUG] main_reasoning using model={MAIN_MODEL}")
     return run_model(MAIN_MODEL, prompt)
 
 
 def fast_reasoning(prompt: str) -> str:
+    print(f"[DEBUG] fast_reasoning using model={FAST_MODEL}")
     return run_model(FAST_MODEL, prompt)
 
 
 def logic_reasoning(prompt: str) -> str:
+    print(f"[DEBUG] logic_reasoning using model={LOGIC_MODEL}")
     return run_model(LOGIC_MODEL, prompt)
 
 
 def run_cloud_llm(prompt: str) -> str:
+    print(f"[DEBUG] run_cloud_llm called, prompt_length={len(prompt)}")
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
+        print(f"[DEBUG] Missing OPENAI_API_KEY for cloud fallback")
         return "[Cloud LLM Error] Missing OPENAI_API_KEY"
 
     try:
@@ -88,10 +109,13 @@ def run_cloud_llm(prompt: str) -> str:
             model=CLOUD_MODEL,
             messages=[{"role": "user", "content": prompt}],
         )
+        print(f"[DEBUG] Cloud LLM success")
         return completion.choices[0].message["content"]
     except ImportError:
+        print(f"[DEBUG] openai package not installed")
         return "[Cloud LLM Error] openai package is not installed"
     except Exception as exc:
+        print(f"[DEBUG] Cloud LLM Exception - {type(exc).__name__}: {exc}")
         return f"[Cloud LLM Exception] {exc}"
 
 
@@ -156,10 +180,14 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
     - optimized: compact report for token/latency savings
     - cloud: force cloud report
     """
+    print(f"[DEBUG] generate_llm_report called - ticker={ticker}, mode={mode}")
+    start_time = time.time()
+    
     mode_value = (mode or "local").strip().lower()
     market_data = fetch_indian_stock_data(ticker)
 
     if not market_data.get("success"):
+        print(f"[DEBUG] Market data fetch failed - {market_data.get('error', 'Unknown error')}")
         return f"Error fetching market data: {market_data.get('error', 'Unknown error')}"
 
     if mode_value == "cloud":
@@ -171,9 +199,11 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
         return run_cloud_llm(full_prompt)
 
     optimized = mode_value in {"optimized", "token_optimized", "token-optimized", "fast"}
+    print(f"[DEBUG] Running in {'optimized' if optimized else 'standard'} mode")
 
     summary = generate_ai_summary(market_data, optimized=optimized)
     if _is_error_response(summary):
+        print(f"[DEBUG] Summary failed, checking cloud fallback")
         if os.getenv("ENABLE_CLOUD_FALLBACK", "1") == "1":
             return run_cloud_llm(
                 "Local model failed. Provide concise Indian stock analysis from this data:\n"
@@ -183,6 +213,9 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
 
     sentiment = quick_sentiment(market_data, optimized=optimized)
     trend_logic = explain_trend_score(market_data, optimized=optimized)
+
+    elapsed = time.time() - start_time
+    print(f"[DEBUG] Report generation completed - elapsed={elapsed:.2f}s")
 
     return (
         f"AI Stock Report ({'Optimized' if optimized else 'Standard'}) for {market_data.get('ticker', ticker)}\n\n"

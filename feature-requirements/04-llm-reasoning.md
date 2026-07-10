@@ -183,6 +183,8 @@ def explain_trend_score(data):
   - `cloud` - Force cloud-only generation
 - No API key required for local models
 - Fallback to cloud on local failure
+- **Timeout Configuration**: Subprocess timeout is set to 120 seconds in `run_model()`
+- **Chainlit Timeout**: For production, consider adding `timeout = 300` in `.chainlit/config.toml` under `[server]` to prevent h11 connection errors during long-running LLM operations
 
 ## Dependencies
 - No HTTP dependencies required for subprocess approach
