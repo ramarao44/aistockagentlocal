@@ -26,33 +26,80 @@ MOCK_MARKET_DATA = {
 
 def test_local_standard_mode():
     with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
-        "src.reasoning.llm_reasoner.main_reasoning", return_value="Standard summary"
-    ), patch("src.reasoning.llm_reasoner.fast_reasoning", return_value="Bullish"), patch(
-        "src.reasoning.llm_reasoner.logic_reasoning", return_value="Trend logic"
+        "src.reasoning.llm_reasoner.main_reasoning",
+        return_value=(
+            "Summary:\nS1.\nS2.\n\n"
+            "Indicators:\nS1.\nS2.\n\n"
+            "Sentiment:\nS1.\nS2.\n\n"
+            "Risks:\nS1.\nS2.\n\n"
+            "Opportunities:\nS1.\nS2.\n\n"
+            "Recommendation:\nS1.\nS2."
+        ),
     ):
         report = llm_reasoner.generate_llm_report("RELIANCE.NS", mode="local")
         assert "AI Stock Report (Standard)" in report
-        assert "Standard summary" in report
-        assert "Bullish" in report
+        assert "Summary:" in report
+        assert "Recommendation:" in report
+        assert "SectionScore Total:" in report
 
 
-def test_optimized_mode_uses_fast_path_for_summary():
+def test_optimized_mode_uses_main_model_once():
     with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
-        "src.reasoning.llm_reasoner.fast_reasoning", return_value="Compact output"
-    ) as fast_mock, patch("src.reasoning.llm_reasoner.logic_reasoning", return_value="Compact logic"):
+        "src.reasoning.llm_reasoner.main_reasoning",
+        return_value=(
+            "Summary:\nS1.\nS2.\n\n"
+            "Indicators:\nS1.\nS2.\n\n"
+            "Sentiment:\nS1.\nS2.\n\n"
+            "Risks:\nS1.\nS2.\n\n"
+            "Opportunities:\nS1.\nS2.\n\n"
+            "Recommendation:\nS1.\nS2."
+        ),
+    ) as main_mock:
         report = llm_reasoner.generate_llm_report("RELIANCE.NS", mode="optimized")
         assert "AI Stock Report (Optimized)" in report
-        assert "Compact output" in report
-        assert fast_mock.call_count >= 2
+        assert "Indicators:" in report
+        assert main_mock.call_count == 1
+        assert "SectionScore Summary:" in report
 
 
 def test_local_failure_falls_back_to_cloud():
     with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
         "src.reasoning.llm_reasoner.main_reasoning", return_value="[Local LLM Error] model unavailable"
-    ), patch("src.reasoning.llm_reasoner.run_cloud_llm", return_value="Cloud fallback report") as cloud_mock:
+    ), patch(
+        "src.reasoning.llm_reasoner.run_cloud_llm",
+        return_value=(
+            "Summary:\nS1.\nS2.\n\n"
+            "Indicators:\nS1.\nS2.\n\n"
+            "Sentiment:\nS1.\nS2.\n\n"
+            "Risks:\nS1.\nS2.\n\n"
+            "Opportunities:\nS1.\nS2.\n\n"
+            "Recommendation:\nS1.\nS2."
+        ),
+    ) as cloud_mock:
         report = llm_reasoner.generate_llm_report("RELIANCE.NS", mode="local")
-        assert "Cloud fallback report" in report
+        assert "Summary:" in report
+        assert "Recommendation:" in report
         assert cloud_mock.called
+        assert "SectionScore Total:" in report
+
+
+def test_score_total_bounds():
+    section_map = {
+        "Summary": "The trend is mixed and direction is unclear.",
+        "Indicators": "RSI is near neutral and MA50 is below MA200.",
+        "Sentiment": "Sentiment is neutral because momentum is weak.",
+        "Risks": "There is downside risk if support fails.",
+        "Opportunities": "A breakout can offer opportunity when volume improves.",
+        "Recommendation": "Prefer a cautious staged entry with risk controls.",
+    }
+    scores = llm_reasoner.score_report_sections(section_map)
+    assert 0 <= scores["Summary"] <= 5
+    assert 0 <= scores["Indicators"] <= 5
+    assert 0 <= scores["Sentiment"] <= 5
+    assert 0 <= scores["Risks"] <= 5
+    assert 0 <= scores["Opportunities"] <= 5
+    assert 0 <= scores["Recommendation"] <= 5
+    assert 0 <= scores["Total"] <= 30
 
 
 def test_cloud_mode_missing_key_error():
@@ -216,9 +263,7 @@ def test_report_generation_timing():
     start_time = time.time()
     
     with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), \
-         patch("src.reasoning.llm_reasoner.main_reasoning", return_value="Summary"), \
-         patch("src.reasoning.llm_reasoner.fast_reasoning", return_value="Sentiment"), \
-         patch("src.reasoning.llm_reasoner.logic_reasoning", return_value="Logic"):
+         patch("src.reasoning.llm_reasoner.main_reasoning", return_value="Summary:\nS1.\nS2.\n\nIndicators:\nS1.\nS2.\n\nSentiment:\nS1.\nS2.\n\nRisks:\nS1.\nS2.\n\nOpportunities:\nS1.\nS2.\n\nRecommendation:\nS1.\nS2."):
         
         report = llm_reasoner.generate_llm_report("RELIANCE.NS", mode="local")
         elapsed = time.time() - start_time
@@ -256,11 +301,14 @@ if __name__ == "__main__":
     test_local_standard_mode()
     print("- [PASS] test_local_standard_mode")
     
-    test_optimized_mode_uses_fast_path_for_summary()
-    print("- [PASS] test_optimized_mode_uses_fast_path_for_summary")
+    test_optimized_mode_uses_main_model_once()
+    print("- [PASS] test_optimized_mode_uses_main_model_once")
     
     test_local_failure_falls_back_to_cloud()
     print("- [PASS] test_local_failure_falls_back_to_cloud")
+
+    test_score_total_bounds()
+    print("- [PASS] test_score_total_bounds")
     
     test_cloud_mode_missing_key_error()
     print("- [PASS] test_cloud_mode_missing_key_error")

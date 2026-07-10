@@ -1,6 +1,6 @@
 # AI Stock Agent - Design & Development Document
 **Version:** 1.0
-**Last Updated:** 2026-07-10
+**Last Updated:** 2026-07-11
 **Status:** Living Document
 
 ---
@@ -20,6 +20,9 @@
 ---
 
 ## 📝 Change Log
+- **2026-07-11:** Standardized LLM output to a fixed 6-section evaluation format with strict validation, retry, and deterministic fallback in `src/reasoning/llm_reasoner.py` - ensures machine-parsable, deterministic report structure for cross-model comparison.
+- **2026-07-11:** Added deterministic section scoring (`0-5` each, total `0-30`) appended as `SectionScore` lines in report output - enables quantifiable model evaluation and easy downstream parsing.
+- **2026-07-11:** Added compatibility-safe Ollama execution (`--no-ansi` first, auto-retry without flag on older CLI versions) and aligned test suites (`scripts/test_llm_reasoning.py`, `scripts/test_ai_report.py`, `scripts/test_reasoning.py`) - prevents runtime breaks while preserving clean output intent.
 - **2026-07-10:** Fixed h11 LocalProtocolError in Chainlit app by using `asyncio.to_thread()` for non-blocking LLM calls - prevents HTTP connection errors when running multiple subprocess-based LLM calls; added comprehensive debug prints to trace LLM operations; added timeout configuration to Chainlit config (300s server timeout, 120s subprocess timeout).
   - **Interview Prep Created:** AI_PM_INTERVIEW_PREP.md documents 7 STAR stories extracted from audit experience. All documentation updated with cross-references to create cohesive learning ecosystem.
   - **Architectural Lessons:** See "Architectural Decision Trade-offs" section below for insights into schema design, data pipeline constraints, and error handling patterns.

@@ -1,7 +1,7 @@
 # Lessons Learned - AI Stock Agent Project
 
 **Version:** 2.0
-**Last Updated:** 2026-07-09
+**Last Updated:** 2026-07-11
 **Purpose:** Document technical challenges, solutions, AND product leadership lessons from Phase 2 audit for interview preparation
 
 ---
@@ -181,6 +181,36 @@ That document contains:
 ---
 
 ## 🔧 Technical Lessons
+
+### 00. Deterministic Report Contracts Need Guardrails (2026-07-11)
+**Problem:** Small local models can violate strict output contracts (fixed sections/sentences) even with strong prompts.
+
+**Solution:** Added a layered enforcement strategy in `src/reasoning/llm_reasoner.py`:
+- Primary generation with strict template prompt
+- Automatic repair retry when format is invalid
+- Deterministic fallback report if repair still fails
+
+**Key Takeaway:** Prompting alone is not enough for production-grade deterministic output; enforce structure in code and provide a safe fallback.
+
+---
+
+### 01. Quantifiable Evaluation Works Better with Rule-Based Scoring (2026-07-11)
+**Problem:** Free-form qualitative review made model comparison subjective across runs.
+
+**Solution:** Added machine-parsable section scoring (`Summary`, `Indicators`, `Sentiment`, `Risks`, `Opportunities`, `Recommendation`) with per-section `0-5` and total `0-30`.
+
+**Key Takeaway:** A deterministic score trailer allows objective cross-model comparison and simpler automation (alerts, dashboards, CI checks).
+
+---
+
+### 02. CLI Compatibility Should Be Built-In for Flags (2026-07-11)
+**Problem:** `--no-ansi` is not supported in all installed Ollama CLI versions, causing local report generation failures.
+
+**Solution:** Execute with `--no-ansi` first, then auto-retry without the flag when the CLI reports `unknown flag`.
+
+**Key Takeaway:** For local toolchains with version variance, implement compatibility fallback logic instead of hard-failing on optional flags.
+
+---
 
 ### 0. Reduce Modes to Reduce Operational Risk (2026-07-10)
 **Problem:** Multiple cloud mode variants increased maintenance and test surface area.

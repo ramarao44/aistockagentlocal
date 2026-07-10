@@ -99,6 +99,27 @@ def resolve_symbol_from_web(user_input: str):
 
     return None
 
+
+def resolve_symbol_from_google_fallback(user_input: str):
+    """Search Google/Moneycontrol to find correct ticker when Yahoo Finance search fails."""
+    try:
+        search_url = f"https://www.google.com/search?q={quote_plus(user_input)}+stock+nse+bse"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0",
+        }
+        response = requests.get(search_url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        mc_match = re.search(r"moneycontrol\.com/stocks/[^/]+/[^/]+/([^/]+)/", response.text)
+        if mc_match:
+            found_ticker = mc_match.group(1).upper()
+            return {"nse": f"{found_ticker}.NS", "bse": f"{found_ticker}.BO"}
+
+        return None
+    except Exception as e:
+        print(f"[DEBUG] Google fallback failed: {str(e)}")
+        return None
+
 def normalize_ticker(user_input: str):
     base = user_input.strip().upper()
 
@@ -753,11 +774,26 @@ def fetch_indian_stock_data(user_input: str):
             used_source = source
             break
 
+    # Google search fallback if all methods failed
     if df is None or tickers is None:
-        return {
-            "success": False,
-            "error": f"Could not fetch data for {user_input}"
-        }
+        google_resolved = resolve_symbol_from_google_fallback(user_input)
+        if google_resolved:
+            tickers = google_resolved
+            df = fetch_price_history(tickers["nse"])
+            if df is not None:
+                exchange = "NSE"
+            else:
+                df = fetch_price_history(tickers["bse"])
+                if df is not None:
+                    exchange = "BSE"
+            if df is not None:
+                used_source = "google_fallback"
+
+        if df is None:
+            return {
+                "success": False,
+                "error": f"Could not fetch data for {user_input}. Tried Yahoo Finance and Google search."
+            }
 
     if used_source != "cache":
         try:

@@ -1,6 +1,6 @@
 # Quick Reference - AI Stock Agent
 
-**Last Updated:** 2026-07-10
+**Last Updated:** 2026-07-11
 
 ---
 
@@ -71,6 +71,24 @@ curl http://localhost:11434/api/tags
 - `local` - standard local report path
 - `optimized` - compact low-latency report path
 - `cloud` - OpenAI cloud path (fallback/forced)
+
+### Standardized Report Output Contract
+
+- Fixed sections in order:
+    - `Summary`
+    - `Indicators`
+    - `Sentiment`
+    - `Risks`
+    - `Opportunities`
+    - `Recommendation`
+- Machine-parsable score trailer:
+    - `SectionScore Summary: X/5`
+    - `SectionScore Indicators: X/5`
+    - `SectionScore Sentiment: X/5`
+    - `SectionScore Risks: X/5`
+    - `SectionScore Opportunities: X/5`
+    - `SectionScore Recommendation: X/5`
+    - `SectionScore Total: Y/30`
 
 ---
 
