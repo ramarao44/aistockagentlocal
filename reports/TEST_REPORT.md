@@ -1,42 +1,64 @@
-# Test Report - 2026-07-10
+# Test Report - 2026-07-11
 
 ## Environment
 - Python environment: local virtual environment
 - Project: AI Stock Agent
-- Date: 2026-07-10
+- Date: 2026-07-11
 
 ## Tests Run
-- `python scripts/run_all_tests.py` (18 test scripts)
-- `python scripts/test_llm_reasoning.py` (enhanced with robust tests + debug prints)
+- `python -m scripts.test_mvp`
+- `python -m scripts.test_db`
+- `python -m scripts.test_llm_reasoning`
+- `python scripts/test_ai_report.py`
+- `python scripts/test_reasoning.py`
 
 ## Results Summary
-- **All 18 test scripts: PASS**
-- **LLM Health Checks: PASS** - Ollama server available, all models installed
-- **Core LLM Tests: PASS**
-- **Robust Error Handling Tests: PASS**
+- **Pre-push mandatory tests: PASS**
+- **LLM Health Checks: PASS** - Ollama server available, all required models installed
+- **Reasoning unit/integration tests: PASS**
+- **Live smoke checks (local + optimized): PASS**
+- **Standardized section scoring trailer present:** `SectionScore Total: 28/30` in both smoke checks
+
+## Changes Validated in This Run
+- Standardized evaluation-ready report template (6 fixed sections, deterministic validation path)
+- Single-call local reasoning path using `MAIN_LLM_MODEL` for both `local` and `optimized` modes
+- Output format enforcement with retry + deterministic fallback for non-compliant model output
+- Added machine-parsable scoring block:
+  - `SectionScore Summary: X/5`
+  - `SectionScore Indicators: X/5`
+  - `SectionScore Sentiment: X/5`
+  - `SectionScore Risks: X/5`
+  - `SectionScore Opportunities: X/5`
+  - `SectionScore Recommendation: X/5`
+  - `SectionScore Total: Y/30`
+- Added Google/Moneycontrol symbol fallback branch in market fetch path with enriched failure message
 
 ## LLM Subsystem Health Checks
 - [x] Ollama CLI available and responsive
 - [x] All required models installed (qwen2.5:3b, llama3.2:3b, phi3:3.8b)
 - [x] Server connectivity verified
 
-## LLM Error Handling Tests Added
+## LLM Error Handling and Reliability Coverage
 - [x] `test_llm_error_response_format` - Validates error format detection
 - [x] `test_llm_timeout_handling` - Tests timeout error handling
 - [x] `test_llm_file_not_found_handling` - Tests missing CLI handling
 - [x] `test_llm_subprocess_error_handling` - Tests subprocess error formatting
 - [x] `test_empty_output_handling` - Tests empty response handling
-- [x] `test_ollama_server_available` - Health check for Ollama CLI
-- [x] `test_required_models_installed` - Validates model availability
+- [x] Ollama CLI health check - Server available and responsive
+- [x] Required model availability check - `qwen2.5:3b`, `llama3.2:3b`, `phi3:3.8b`
 - [x] `test_subprocess_timeout_value` - Verifies 120s timeout configured
 - [x] `test_report_generation_timing` - Validates report generation speed
 
-## Configuration Changes
-- Added `[server] timeout = 300` to `.chainlit/config.toml` to prevent h11 connection errors during long-running LLM operations
+## Configuration and Runtime Notes
+- Ollama call flow tries `--no-ansi` first and auto-retries without it when unsupported by installed CLI versions
+- Cloud mode still requires `OPENAI_API_KEY`; missing key path validated and handled
 
-## Source Code Changes for h11 Error Fix
-- **app.py**: Changed synchronous `generate_llm_report()` call to async using `asyncio.to_thread()` to prevent blocking the Chainlit event loop
-- Added debug prints to `src/reasoning/llm_reasoner.py` for timing and model tracking
+## Source Code Areas Covered
+- `src/reasoning/llm_reasoner.py`
+- `scripts/test_llm_reasoning.py`
+- `scripts/test_ai_report.py`
+- `scripts/test_reasoning.py`
+- `src/fetcher/market_fetcher.py`
 
 ## Debug Prints Added to Source
 - Added timing and model tracking in `src/reasoning/llm_reasoner.py`:
@@ -52,8 +74,5 @@
 - Subprocess timeout is set to 120 seconds in `run_model()`
 
 ## Notes
-- The LLM subsystem now has comprehensive error handling tests
-- All tests pass including edge cases for server connectivity issues
-- The robust tests will catch "Could not reach the server" errors during testing
-- Cloud fallback mechanism is tested and working correctly
-- Timeout configuration documented for production deployment
+- Pre-push checklist test gate passed with current working tree changes.
+- Documentation, tests, and implementation are now aligned to the standardized evaluation format and score-output contract.

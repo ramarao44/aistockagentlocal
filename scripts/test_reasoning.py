@@ -35,11 +35,20 @@ def test_reasoning_optimized_llm_mode():
         "last_updated": "2026-07-10",
     }
     with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=market_data), patch(
-        "src.reasoning.llm_reasoner.fast_reasoning", return_value="Optimized summary"
-    ), patch("src.reasoning.llm_reasoner.logic_reasoning", return_value="Optimized logic"):
+        "src.reasoning.llm_reasoner.main_reasoning",
+        return_value=(
+            "Summary:\nS1.\nS2.\n\n"
+            "Indicators:\nS1.\nS2.\n\n"
+            "Sentiment:\nS1.\nS2.\n\n"
+            "Risks:\nS1.\nS2.\n\n"
+            "Opportunities:\nS1.\nS2.\n\n"
+            "Recommendation:\nS1.\nS2."
+        ),
+    ):
         llm_report = generate_llm_report("AAPL", mode="optimized")
         assert "AI Stock Report (Optimized)" in llm_report
-        assert "Optimized summary" in llm_report
+        assert "Indicators:" in llm_report
+        assert "SectionScore Total:" in llm_report
     print("Optimized LLM reasoning mode validated")
 
 

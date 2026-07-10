@@ -37,9 +37,18 @@ market_data = {
 }
 
 with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=market_data), patch(
-    "src.reasoning.llm_reasoner.fast_reasoning", return_value="Optimized summary"
-), patch("src.reasoning.llm_reasoner.logic_reasoning", return_value="Optimized logic"):
+    "src.reasoning.llm_reasoner.main_reasoning",
+    return_value=(
+        "Summary:\nS1.\nS2.\n\n"
+        "Indicators:\nS1.\nS2.\n\n"
+        "Sentiment:\nS1.\nS2.\n\n"
+        "Risks:\nS1.\nS2.\n\n"
+        "Opportunities:\nS1.\nS2.\n\n"
+        "Recommendation:\nS1.\nS2."
+    ),
+):
     optimized_report = generate_llm_report("RELIANCE.NS", mode="optimized")
     assert "AI Stock Report (Optimized)" in optimized_report
-    assert "Optimized summary" in optimized_report
+    assert "Recommendation:" in optimized_report
+    assert "SectionScore Total:" in optimized_report
     print("Optimized AI report generation validated")
