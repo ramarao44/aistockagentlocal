@@ -19,6 +19,23 @@ DB_PATH = Path("data/agent.db")
 def get_connection():
     return sqlite3.connect(DB_PATH)
 
+
+def ensure_symbol_resolution_cache_table():
+    with get_connection() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS symbol_resolution_cache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                input_key TEXT NOT NULL UNIQUE,
+                resolved_nse TEXT NOT NULL,
+                resolved_bse TEXT NOT NULL,
+                source TEXT,
+                last_used_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.commit()
+
 def save_market_data(df: pd.DataFrame, ticker: str):
     df = df.copy()
     df["ticker"] = ticker
@@ -208,3 +225,54 @@ def load_sentiment(ticker: str):
             params=(ticker,)
         )
     return df
+
+
+def load_symbol_resolution_cache(input_key: str):
+    ensure_symbol_resolution_cache_table()
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT resolved_nse, resolved_bse, source
+            FROM symbol_resolution_cache
+            WHERE input_key = ?
+            LIMIT 1
+            """,
+            (input_key,)
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        conn.execute(
+            """
+            UPDATE symbol_resolution_cache
+            SET last_used_at = CURRENT_TIMESTAMP
+            WHERE input_key = ?
+            """,
+            (input_key,)
+        )
+        conn.commit()
+
+    return {
+        "nse": row[0],
+        "bse": row[1],
+        "source": row[2],
+    }
+
+
+def save_symbol_resolution_cache(input_key: str, resolved_nse: str, resolved_bse: str, source: str = "resolved"):
+    ensure_symbol_resolution_cache_table()
+    with get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO symbol_resolution_cache (input_key, resolved_nse, resolved_bse, source, last_used_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(input_key) DO UPDATE SET
+                resolved_nse = excluded.resolved_nse,
+                resolved_bse = excluded.resolved_bse,
+                source = excluded.source,
+                last_used_at = CURRENT_TIMESTAMP
+            """,
+            (input_key, resolved_nse, resolved_bse, source),
+        )
+        conn.commit()

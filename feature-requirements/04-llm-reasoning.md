@@ -183,6 +183,8 @@ def explain_trend_score(data):
   - `cloud` - Force cloud-only generation
 - No API key required for local models
 - Fallback to cloud on local failure
+- **Timeout Configuration**: Subprocess timeout is set to 120 seconds in `run_model()`
+- **Chainlit Timeout**: For production, consider adding `timeout = 300` in `.chainlit/config.toml` under `[server]` to prevent h11 connection errors during long-running LLM operations
 
 ## Dependencies
 - No HTTP dependencies required for subprocess approach
@@ -194,3 +196,10 @@ def explain_trend_score(data):
 - `scripts/test_reasoning.py` - Reasoning tests
 - `scripts/test_ai_report.py` - Report generation tests
 - Tests validate standard mode, optimized mode, and cloud fallback behavior
+
+## Manual Testing
+1. Run `python scripts/test_llm_reasoning.py` to verify the local, optimized, and cloud branches.
+2. Launch the UI and request a report for a ticker such as `RELIANCE`.
+3. Compare a normal report with `mode="optimized"` and confirm the optimized report is shorter and faster.
+4. Temporarily disable or remove the local model and verify cloud fallback or error handling behaves as expected.
+5. On Windows, confirm the report generation no longer fails with a console encoding error.

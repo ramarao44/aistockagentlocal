@@ -179,3 +179,10 @@ def save_market_data(df: pd.DataFrame, ticker: str):
 ## Test Cases
 - `scripts/test_db.py` - Database tests
 - `scripts/test_db_load.py` - Data loading tests
+
+## Manual Testing
+1. Run `python scripts/test_db.py` and `python scripts/test_db_load.py`.
+2. Save one market-data row and one indicator row, then verify they can be read back by ticker.
+3. Save the same row twice and confirm the UPSERT path prevents duplicate records.
+4. Insert a news or sentiment record and verify the latest query returns the expected row.
+5. Check the SQLite database file in `data/` to confirm tables are created and populated.

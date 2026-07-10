@@ -9,6 +9,7 @@ The project combines deterministic market-data processing with LLM-based reasoni
 - Market data and indicators are fetched/computed in Python modules.
 - LLM reasoning supports local Ollama models and optional OpenAI fallback.
 - Reports can run in standard or optimized mode.
+- Market fetcher resolves free-text company names and caches resolved symbols for reuse.
 
 ## LLM Reasoning Modes
 
@@ -56,4 +57,16 @@ LOGIC_LLM_MODEL=phi3:3.8b
 python scripts/test_llm_reasoning.py
 python scripts/test_reasoning.py
 python scripts/test_ai_report.py
+```
+
+## Webhook Test Runner
+
+`run_tests.py` posts to webhook URL from `TEST_REPORT_URL` environment variable.
+
+- Default: `http://localhost:8000/report`
+- Override example (PowerShell):
+
+```powershell
+$env:TEST_REPORT_URL="http://localhost:8000/report"
+python run_tests.py
 ```

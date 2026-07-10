@@ -187,3 +187,10 @@ def compute_rsi(df: pd.DataFrame, period: int = 14) -> float:
 - `scripts/test_adx.py` - ADX tests
 - `scripts/test_breakout.py` - Volume breakout tests
 - `scripts/test_sr.py` - Support/Resistance tests
+
+## Manual Testing
+1. Fetch a stock with enough history, such as `RELIANCE`, so indicator windows are available.
+2. Confirm RSI, MACD, MA20, MA50, SuperTrend, ADX, and Bollinger values are returned and not `None` when data is sufficient.
+3. Test a short-history or invalid dataset and confirm insufficient-data paths return `None` without crashing.
+4. Compare the returned indicator values against a known charting tool or a quick notebook calculation for the same ticker.
+5. Confirm the volume breakout flag changes when the latest volume is well above the 20-day average.

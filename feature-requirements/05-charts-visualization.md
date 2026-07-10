@@ -142,3 +142,10 @@ def generate_price_chart(df: pd.DataFrame, ticker: str) -> str:
 ## Test Cases
 - `scripts/test_charts.py` - Main chart tests
 - `scripts/test_chart_rsi.py` - RSI chart specific tests
+
+## Manual Testing
+1. Generate charts for a ticker with enough data, such as `RELIANCE`.
+2. Confirm the price chart renders price, MA20, and MA50 correctly.
+3. Confirm RSI, MACD, Bollinger Bands, and volume breakout charts show the expected indicator zones and colors.
+4. Test with a ticker that has limited history and confirm the chart code fails gracefully.
+5. Verify the generated image or plot is visible in Chainlit and saved in the expected cache folder.

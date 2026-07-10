@@ -74,6 +74,18 @@ curl http://localhost:11434/api/tags
 
 ---
 
+## 🔎 Symbol Resolution Cache
+
+Market fetch flow (`fetch_indian_stock_data`) uses this order:
+
+1. `symbol_resolution_cache` lookup by normalized input key
+2. Direct ticker normalization (`normalize_ticker`)
+3. Yahoo Finance search fallback (`resolve_symbol_from_web`)
+
+Resolved NSE/BSE ticker pairs are persisted in SQLite for reuse.
+
+---
+
 ## 🐛 Common Issues & Solutions
 
 ### yfinance MultiIndex

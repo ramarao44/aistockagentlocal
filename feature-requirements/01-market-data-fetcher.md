@@ -138,3 +138,10 @@ def fetch_indian_stock_data(user_input: str) -> dict:
 - `scripts/test_mvp.py` - Integration tests
 - `scripts/test_vwap.py` - VWAP calculation tests
 - `scripts/test_delivery.py` - Delivery data tests
+
+## Manual Testing
+1. Run `python scripts/test_market_fetcher.py` or call `fetch_indian_stock_data()` from a Python shell.
+2. Test a direct ticker such as `RELIANCE` and confirm it resolves to NSE/BSE symbols.
+3. Test a free-text company name such as `HCL Technologies` and confirm web lookup plus cache persistence.
+4. Test an invalid input such as `INVALID123` and confirm the function returns a clean failure message.
+5. Verify the returned payload includes price history, exchange, and indicator fields when the fetch succeeds.

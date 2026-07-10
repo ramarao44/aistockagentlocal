@@ -40,3 +40,12 @@ CREATE TABLE IF NOT EXISTS sentiment (
     sentiment REAL,
     UNIQUE(ticker, title)
 );
+
+CREATE TABLE IF NOT EXISTS symbol_resolution_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    input_key TEXT NOT NULL UNIQUE,
+    resolved_nse TEXT NOT NULL,
+    resolved_bse TEXT NOT NULL,
+    source TEXT,
+    last_used_at TEXT DEFAULT CURRENT_TIMESTAMP
+);

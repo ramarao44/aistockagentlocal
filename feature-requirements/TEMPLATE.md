@@ -89,3 +89,10 @@ def function_name(params) -> return_type:
 
 ## Test Cases
 - `scripts/test_[module].py` - [Description]
+
+## Manual Testing
+1. Start the app or test harness that exercises this feature.
+2. Run one normal input that should pass through the happy path.
+3. Run one edge case or invalid input that should fail gracefully.
+4. Verify the expected output, saved data, and logs match the acceptance criteria.
+5. Mark the feature complete only after both automated and manual checks pass.
