@@ -1,6 +1,9 @@
-import chainlit as cl
 import asyncio
-from src.reasoning.llm_reasoner import generate_llm_report
+
+import chainlit as cl
+
+from src.ai.llm_reasoner import generate_llm_report
+
 
 @cl.on_chat_start
 async def start():
@@ -8,8 +11,8 @@ async def start():
         content=(
             "📈 Welcome to the AI Stock Agent!\n\n"
             "Enter a stock ticker (e.g., RELIANCE, TCS, INFY) and choose mode:\n"
-            "- **local** → uses Ollama (llama3.2:3b) - private, no API costs\n"
-            "- **cloud** → uses GPT-4o-mini (if configured)\n"
+            "- **local** -> uses Ollama (llama3.2:3b) - private, no API costs\n"
+            "- **cloud** -> uses GPT-4o-mini (if configured)\n"
         )
     ).send()
 
@@ -22,7 +25,6 @@ async def start():
 async def main(message: cl.Message):
     text = message.content.strip()
 
-    # Simple input format: "AAPL local" or "AAPL cloud"
     parts = text.split()
     if len(parts) == 1:
         ticker = parts[0].upper()
@@ -35,6 +37,5 @@ async def main(message: cl.Message):
         content=f"🔍 Generating report for **{ticker}** using **{mode}** mode..."
     ).send()
 
-    # Call your reasoning engine in a thread pool to avoid blocking the event loop
     report = await asyncio.to_thread(generate_llm_report, ticker, mode=mode)
     await cl.Message(content=report).send()

@@ -8,7 +8,7 @@ if ROOT not in sys.path:
 
 from src.database.engine import Base, engine
 from src.database.crud import save_ai_report
-from src.reasoning.llm_reasoner import generate_llm_report
+from src.ai.llm_reasoner import generate_llm_report
 
 Base.metadata.create_all(bind=engine)
 
@@ -36,8 +36,8 @@ market_data = {
     "last_updated": "2026-07-10",
 }
 
-with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=market_data), patch(
-    "src.reasoning.llm_reasoner.main_reasoning",
+with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=market_data), patch(
+    "src.ai.llm_reasoner.main_reasoning",
     return_value=(
         "Summary:\nS1.\nS2.\n\n"
         "Indicators:\nS1.\nS2.\n\n"

@@ -12,7 +12,7 @@ This folder contains project design, audit, roadmap, and testing documentation.
 
 ## LLM Reasoning Notes
 
-Current reasoning implementation is in `src/reasoning/llm_reasoner.py`.
+Current reasoning implementation is in `src/ai/llm_reasoner.py`.
 
 Supported report modes:
 

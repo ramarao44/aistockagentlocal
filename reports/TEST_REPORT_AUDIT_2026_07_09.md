@@ -13,7 +13,7 @@
 | test_ai_report | ✅ PASS | Report saved with ID 86 | Database storage working |
 | test_breakout | ✅ PASS | Volume breakout detection | All 3 stocks: No breakout |
 | test_db | ✅ PASS | Market data saved | RELIANCE.NS price: 1308.40 |
-| **test_db_load** | ⚠️ NOTE | Legacy database layer | Uses old src/db/database.py table |
+| **test_db_load** | ⚠️ NOTE | Legacy database layer | Uses old src/database/sqlite_legacy.py table |
 | test_deepseek | ✅ PASS | API key validation | Expected behavior (no key configured) |
 | test_delivery | ✅ PASS | Graceful failure | Returns None for all stocks (expected) |
 | test_llm_reasoning | ✅ PASS | AAPL error expected | Non-Indian stock, correct behavior |

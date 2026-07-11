@@ -1,0 +1,1 @@
+from src.ingestion.market_fetcher import compute_supertrend

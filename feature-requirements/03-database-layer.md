@@ -71,7 +71,7 @@
   - `News` - News model
   - `Sentiment` - Sentiment model
 
-- `src/db/database.py` - SQLite operations
+- `src/database/sqlite_legacy.py` - SQLite operations
   - `save_market_data(df, ticker)` - Save OHLCV
   - `save_indicators(df, ticker)` - Save indicators
   - `load_market_data(ticker)` - Load data

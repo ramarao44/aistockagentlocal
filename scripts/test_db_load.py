@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-from src.db.database import (
+from src.database.sqlite_legacy import (
     load_market_data,
     load_indicators,
     load_latest_market_data,

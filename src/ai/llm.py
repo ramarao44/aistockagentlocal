@@ -1,4 +1,4 @@
-from src.reasoning.llm_reasoner import generate_llm_report
+from src.ai.llm_reasoner import generate_llm_report
 
 
 def generate_ai_report(data: dict, trend_score: float):

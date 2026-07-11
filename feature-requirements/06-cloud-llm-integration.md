@@ -42,7 +42,7 @@
 ## Implementation Details
 
 ### Functions to Create/Modify
-- `src/reasoning/llm_reasoner.py` - LLM integration
+- `src/ai/llm_reasoner.py` - LLM integration
   - `run_cloud_llm(prompt: str)` - Call OpenAI API
   - `generate_llm_report(ticker: str, mode: str)` - Updated with mode parameter
 

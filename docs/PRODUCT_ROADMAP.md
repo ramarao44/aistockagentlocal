@@ -76,13 +76,13 @@ Build a comprehensive, local-first AI stock analysis platform for Indian markets
 ### Features
 | Feature | Status | Implementation | Notes |
 |---------|--------|---|---|
-| SQLite database setup | ✅ DONE | `src/db/database.py` + `src/database/engine.py` | Dual-layer support (legacy + new SQLAlchemy) |
+| SQLite database setup | ✅ DONE | `src/database/sqlite_legacy.py` + `src/database/engine.py` | Dual-layer support (legacy + new SQLAlchemy) |
 | SQLAlchemy models | ✅ DONE | `src/database/models.py` (30 columns) | Updated with all technical indicators |
 | CRUD operations | ✅ DONE | `src/database/crud.py` | Full create/read operations working |
 | Market data storage | ✅ DONE | OHLCV + 13 indicators | Now stores: RSI, MACD, MA20/50/200, ADX, Bollinger Bands, etc. |
 | Indicator storage | ✅ **FIXED** | All 13 indicators persisted | **Audit Fix:** Was 0% implemented, now 100% complete |
-| News storage | ✅ DONE | `src/fetcher/news_fetcher.py` | RSS feed pipeline working |
-| Sentiment storage | ✅ DONE | `src/analyzer/sentiment_analyzer.py` | VADER sentiment scoring working |
+| News storage | ✅ DONE | `src/ingestion/news_fetcher.py` | RSS feed pipeline working |
+| Sentiment storage | ✅ DONE | `src/analysis/sentiment/sentiment_analyzer.py` | VADER sentiment scoring working |
 | Delivery data storage | ⚠️ EXPERIMENTAL | Moneycontrol web scraping + NSE API option | **Known Limitation:** Web scraping unreliable, gracefully returns None |
 
 ### Known Issues & Limitations

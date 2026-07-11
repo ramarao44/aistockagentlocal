@@ -60,7 +60,7 @@ python -m scripts.test_db
 
 ### Test Command
 ```bash
-python -c "from src.reasoning.llm_reasoner import generate_llm_report; print(generate_llm_report('RELIANCE', mode='local'))"
+python -c "from src.ai.llm_reasoner import generate_llm_report; print(generate_llm_report('RELIANCE', mode='local'))"
 ```
 
 ### Test Results

@@ -1,4 +1,4 @@
 import inspect
-import src.fetcher.market_fetcher as mf
+import src.ingestion.market_fetcher as mf
 
 print(inspect.getsource(mf.fetch_indian_stock_data))

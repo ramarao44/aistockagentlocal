@@ -16,7 +16,7 @@ python -m scripts.test_db
 python -m scripts.test_llm_reasoning
 
 # Run UI
-chainlit run app.py
+chainlit run main.py
 
 # Run server
 python local_server.py
@@ -31,9 +31,9 @@ curl http://localhost:11434/api/tags
 
 | Purpose | File |
 |---------|------|
-| **UI** | `app.py` |
-| **LLM** | `src/reasoning/llm_reasoner.py` |
-| **Fetcher** | `src/fetcher/market_fetcher.py` |
+| **UI** | `main.py` |
+| **LLM** | `src/ai/llm_reasoner.py` |
+| **Fetcher** | `src/ingestion/market_fetcher.py` |
 | **Database** | `src/database/` |
 | **Tests** | `scripts/` |
 | **Config** | `.env` |
@@ -47,14 +47,14 @@ curl http://localhost:11434/api/tags
 
 | Indicator | Function | File |
 |-----------|----------|------|
-| RSI | `compute_rsi()` | `src/fetcher/market_fetcher.py` |
-| MACD | `compute_macd()` | `src/fetcher/market_fetcher.py` |
-| MA20 | `compute_moving_average(df, 20)` | `src/fetcher/market_fetcher.py` |
-| MA50 | `compute_moving_average(df, 50)` | `src/fetcher/market_fetcher.py` |
-| SuperTrend | `compute_supertrend()` | `src/fetcher/market_fetcher.py` |
-| ADX | `compute_adx()` | `src/fetcher/market_fetcher.py` |
-| VWAP | `calculate_vwap()` | `src/fetcher/market_fetcher.py` |
-| Bollinger | `compute_bollinger_bands()` | `src/fetcher/market_fetcher.py` |
+| RSI | `compute_rsi()` | `src/ingestion/market_fetcher.py` |
+| MACD | `compute_macd()` | `src/ingestion/market_fetcher.py` |
+| MA20 | `compute_moving_average(df, 20)` | `src/ingestion/market_fetcher.py` |
+| MA50 | `compute_moving_average(df, 50)` | `src/ingestion/market_fetcher.py` |
+| SuperTrend | `compute_supertrend()` | `src/ingestion/market_fetcher.py` |
+| ADX | `compute_adx()` | `src/ingestion/market_fetcher.py` |
+| VWAP | `calculate_vwap()` | `src/ingestion/market_fetcher.py` |
+| Bollinger | `compute_bollinger_bands()` | `src/ingestion/market_fetcher.py` |
 
 ---
 

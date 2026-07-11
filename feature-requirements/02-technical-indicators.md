@@ -90,7 +90,7 @@
 ## Implementation Details
 
 ### Functions to Create/Modify
-- `src/fetcher/market_fetcher.py` - All indicator functions
+- `src/ingestion/market_fetcher.py` - All indicator functions
   - `compute_rsi(df, period=14)` - Calculate RSI
   - `compute_macd(df, fast=12, slow=26, signal=9)` - Calculate MACD
   - `compute_moving_average(df, window=50)` - Calculate MA

@@ -1,5 +1,5 @@
 from src.database.engine import Base, engine
-from src.fetcher.market_fetcher import fetch_indian_stock_data
+from src.ingestion.market_fetcher import fetch_indian_stock_data
 
 # Create tables
 Base.metadata.create_all(bind=engine)

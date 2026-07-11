@@ -7,7 +7,7 @@ import time
 import re
 from typing import Any, cast
 
-from src.fetcher.market_fetcher import fetch_indian_stock_data
+from src.ingestion.market_fetcher import fetch_indian_stock_data
 
 MAIN_MODEL = os.getenv("MAIN_LLM_MODEL", "qwen2.5:3b")
 FAST_MODEL = os.getenv("FAST_LLM_MODEL", "llama3.2:3b")

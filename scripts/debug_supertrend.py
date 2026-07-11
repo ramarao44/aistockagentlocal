@@ -1,4 +1,4 @@
-from src.fetcher.market_fetcher import fetch_price_history, compute_supertrend
+from src.ingestion.market_fetcher import fetch_price_history, compute_supertrend
 import traceback
 
 if __name__ == '__main__':

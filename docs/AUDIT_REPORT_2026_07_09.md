@@ -53,7 +53,7 @@
 
 ### Phase 2: Code Review
 - Reviewed `src/database/models.py` - **Schema incomplete**
-- Reviewed `src/fetcher/market_fetcher.py` - **Indicators computed but not saved**
+- Reviewed `src/ingestion/market_fetcher.py` - **Indicators computed but not saved**
 - Reviewed `src/database/crud.py` - **save_daily_record() missing indicator fields**
 
 ### Phase 3: Root Cause Analysis
@@ -251,7 +251,7 @@ test_delivery:
    - Added 13 new columns to StockDaily model
    - Properly documented indicator fields
 
-2. **src/fetcher/market_fetcher.py**
+2. **src/ingestion/market_fetcher.py**
    - Added ma20 computation (was missing)
    - Updated save_daily_record() to capture all indicators
    - Updated compute_bollinger_bands() to return middle line

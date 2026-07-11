@@ -1,6 +1,6 @@
-from src.fetcher.market_fetcher import fetch_daily_data
-from src.analyzer.technical_analyzer import compute_indicators
-from src.db.database import save_market_data, save_indicators
+from src.ingestion.market_fetcher import fetch_daily_data
+from src.analysis.technical.technical_analyzer import compute_indicators
+from src.database.sqlite_legacy import save_market_data, save_indicators
 
 import sys
 import os

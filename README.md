@@ -13,7 +13,7 @@ The project combines deterministic market-data processing with LLM-based reasoni
 
 ## LLM Reasoning Modes
 
-`src/reasoning/llm_reasoner.py` supports:
+`src/ai/llm_reasoner.py` supports:
 
 - `mode="local"`: full-quality local report using model wrappers.
 - `mode="optimized"`: compact prompt/response path for faster output.
