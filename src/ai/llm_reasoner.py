@@ -8,6 +8,8 @@ import re
 from typing import Any, cast
 
 from src.ingestion.market_fetcher import fetch_indian_stock_data
+from src.analysis.fundamental import analyze_fundamentals
+from src.database.sqlite_legacy import load_latest_fundamental_data
 
 MAIN_MODEL = os.getenv("MAIN_LLM_MODEL", "qwen2.5:3b")
 FAST_MODEL = os.getenv("FAST_LLM_MODEL", "llama3.2:3b")
@@ -39,7 +41,43 @@ def _safe_get(data: dict, key: str, default: str = "N/A"):
     return value
 
 
-def _build_market_snapshot(data: dict) -> str:
+def _format_fundamental_context(fundamentals: dict | None) -> str:
+    if not fundamentals:
+        return "Fundamental Data: unavailable"
+
+    valuation = fundamentals.get("valuation", {})
+    growth = fundamentals.get("growth", {})
+    profitability = fundamentals.get("profitability", {})
+    risk = fundamentals.get("risk", {})
+    quality = fundamentals.get("data_quality", {})
+
+    return (
+        "Fundamental Data:\n"
+        f"- Period: {fundamentals.get('period', 'quarterly')}\n"
+        f"- P/E: {valuation.get('pe_ratio', 'N/A')} | PBV: {valuation.get('pbv_ratio', 'N/A')} | EV/EBITDA: {valuation.get('ev_ebitda', 'N/A')}\n"
+        f"- Revenue YoY: {growth.get('revenue_yoy', 'N/A')} | Earnings YoY: {growth.get('earnings_yoy', 'N/A')}\n"
+        f"- ROE: {profitability.get('roe', 'N/A')} | ROA: {profitability.get('roa', 'N/A')} | ROCE: {profitability.get('roce', 'N/A')}\n"
+        f"- Debt/Equity: {risk.get('debt_to_equity', 'N/A')} | Current Ratio: {risk.get('current_ratio', 'N/A')} | Interest Coverage: {risk.get('interest_coverage', 'N/A')}\n"
+        f"- Fundamental Coverage: {quality.get('coverage_pct', 'N/A')}"
+    )
+
+
+def _load_or_compute_fundamentals(ticker: str, period: str = "quarterly") -> dict | None:
+    try:
+        cached = load_latest_fundamental_data(ticker, period=period)
+        if cached:
+            return cached
+    except Exception:
+        pass
+
+    try:
+        return analyze_fundamentals(ticker, period=period, persist=True)
+    except Exception:
+        return None
+
+
+def _build_market_snapshot(data: dict, fundamentals: dict | None = None) -> str:
+    fundamental_context = _format_fundamental_context(fundamentals)
     return (
         f"Ticker: {_safe_get(data, 'ticker')}\n"
         f"Exchange: {_safe_get(data, 'exchange')}\n"
@@ -49,7 +87,8 @@ def _build_market_snapshot(data: dict) -> str:
         f"MA200: {_safe_get(data, 'ma200')}\n"
         f"Bollinger Upper: {_safe_get(data, 'bollinger_upper')}\n"
         f"Bollinger Lower: {_safe_get(data, 'bollinger_lower')}\n"
-        f"Last Updated: {_safe_get(data, 'last_updated')}"
+        f"Last Updated: {_safe_get(data, 'last_updated')}\n"
+        f"{fundamental_context}"
     )
 
 
@@ -484,7 +523,8 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
         print(f"[DEBUG] Market data fetch failed - {market_data.get('error', 'Unknown error')}")
         return f"Error fetching market data: {market_data.get('error', 'Unknown error')}"
 
-    market_snapshot = _build_market_snapshot(market_data)
+    fundamentals = _load_or_compute_fundamentals(market_data.get("ticker", ticker), period="quarterly")
+    market_snapshot = _build_market_snapshot(market_data, fundamentals=fundamentals)
     standardized_prompt = _build_standardized_report_prompt(market_snapshot)
 
     if mode_value == "cloud":

@@ -23,9 +23,21 @@ MOCK_MARKET_DATA = {
     "last_updated": "2026-07-10",
 }
 
+MOCK_FUNDAMENTALS = {
+    "ticker": "RELIANCE.NS",
+    "period": "quarterly",
+    "valuation": {"pe_ratio": 25.5, "pbv_ratio": 3.2, "ev_ebitda": 18.5},
+    "growth": {"revenue_yoy": 12.1, "earnings_yoy": 10.4},
+    "profitability": {"roe": 14.2, "roa": 8.1, "roce": 12.0},
+    "risk": {"debt_to_equity": 0.3, "current_ratio": 1.8, "interest_coverage": 10.0},
+    "data_quality": {"coverage_pct": 88.0},
+}
+
 
 def test_local_standard_mode():
     with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
+        "src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS
+    ), patch(
         "src.ai.llm_reasoner.main_reasoning",
         return_value=(
             "Summary:\nS1.\nS2.\n\n"
@@ -45,6 +57,8 @@ def test_local_standard_mode():
 
 def test_optimized_mode_uses_main_model_once():
     with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
+        "src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS
+    ), patch(
         "src.ai.llm_reasoner.main_reasoning",
         return_value=(
             "Summary:\nS1.\nS2.\n\n"
@@ -64,6 +78,8 @@ def test_optimized_mode_uses_main_model_once():
 
 def test_local_failure_falls_back_to_cloud():
     with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
+        "src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS
+    ), patch(
         "src.ai.llm_reasoner.main_reasoning", return_value="[Local LLM Error] model unavailable"
     ), patch(
         "src.ai.llm_reasoner.run_cloud_llm",
@@ -103,7 +119,9 @@ def test_score_total_bounds():
 
 
 def test_cloud_mode_missing_key_error():
-    with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch.dict(
+    with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
+        "src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS
+    ), patch.dict(
         "os.environ", {"OPENAI_API_KEY": ""}, clear=False
     ):
         # Temporarily remove OPENAI_API_KEY
@@ -261,8 +279,9 @@ def test_subprocess_timeout_value():
 def test_report_generation_timing():
     """Test that report generation completes within reasonable time bounds."""
     start_time = time.time()
-    
+
     with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), \
+         patch("src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS), \
          patch("src.ai.llm_reasoner.main_reasoning", return_value="Summary:\nS1.\nS2.\n\nIndicators:\nS1.\nS2.\n\nSentiment:\nS1.\nS2.\n\nRisks:\nS1.\nS2.\n\nOpportunities:\nS1.\nS2.\n\nRecommendation:\nS1.\nS2."):
         
         report = llm_reasoner.generate_llm_report("RELIANCE.NS", mode="local")

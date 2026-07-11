@@ -4,6 +4,7 @@ os.chdir(root)
 sys.path.insert(0, root)
 tests = sorted(glob.glob("scripts/test_*.py"))
 print("FOUND", len(tests), "TEST SCRIPTS")
+had_failures = False
 for f in tests:
     name = os.path.splitext(os.path.basename(f))[0]
     print("===", name, "===")
@@ -13,3 +14,7 @@ for f in tests:
     except Exception:
         traceback.print_exc()
         print("EXITCODE 1")
+        had_failures = True
+
+if had_failures:
+    sys.exit(1)

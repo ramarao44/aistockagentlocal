@@ -35,6 +35,17 @@ def test_reasoning_optimized_llm_mode():
         "last_updated": "2026-07-10",
     }
     with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=market_data), patch(
+        "src.ai.llm_reasoner._load_or_compute_fundamentals",
+        return_value={
+            "ticker": "AAPL",
+            "period": "quarterly",
+            "valuation": {"pe_ratio": 30.0},
+            "growth": {"revenue_yoy": 8.5},
+            "profitability": {"roe": 20.0},
+            "risk": {"debt_to_equity": 0.9},
+            "data_quality": {"coverage_pct": 80.0},
+        },
+    ), patch(
         "src.ai.llm_reasoner.main_reasoning",
         return_value=(
             "Summary:\nS1.\nS2.\n\n"
