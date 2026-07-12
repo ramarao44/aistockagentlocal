@@ -502,7 +502,27 @@ def explain_trend_score(data: dict, optimized: bool = False) -> str:
 
 
 def _is_error_response(text: str) -> bool:
-    return text.startswith("[Local LLM Error]") or text.startswith("[Local LLM Exception]")
+    return (
+        text.startswith("[Local LLM Error]")
+        or text.startswith("[Local LLM Exception]")
+        or text.startswith("[Cloud LLM Error]")
+        or text.startswith("[Cloud LLM Exception]")
+    )
+
+
+def _split_sentences(text: str) -> list[str]:
+    return [chunk.strip() for chunk in re.split(r"(?<=[.!?])\s+", (text or "").strip()) if chunk.strip()]
+
+
+def _infer_sentiment_label(text: str, fallback: str = "neutral") -> str:
+    lowered = (text or "").lower()
+    if "bullish" in lowered:
+        return "bullish"
+    if "bearish" in lowered:
+        return "bearish"
+    if "neutral" in lowered:
+        return "neutral"
+    return fallback
 
 
 def generate_llm_report(ticker: str, mode: str = "local") -> str:
@@ -564,6 +584,46 @@ def generate_ai_report(llm_input: dict) -> dict:
     """Build a contract-friendly AI output from pipeline context."""
     symbol = llm_input.get("symbol") or "UNKNOWN"
     timeframe = llm_input.get("timeframe") or "daily"
+    ui = llm_input.get("ui") or {}
+    mode = "local"
+    if isinstance(ui, dict):
+        mode = (ui.get("mode") or "local").strip().lower()
+
+    # Preferred path: invoke the model-backed report generator and adapt it into
+    # the LLM contract expected by the orchestrator.
+    try:
+        raw_report = generate_llm_report(symbol, mode=mode)
+    except Exception as exc:
+        raw_report = f"[Local LLM Exception] {exc}"
+
+    if not _is_error_response(raw_report or "") and not (raw_report or "").startswith("Error fetching market data"):
+        section_map = _extract_section_map(raw_report)
+
+        summary_text = section_map.get("Summary", "").strip()
+        sentiment_text = section_map.get("Sentiment", "").strip()
+        risks_text = section_map.get("Risks", "").strip()
+        opportunities_text = section_map.get("Opportunities", "").strip()
+        recommendation_text = section_map.get("Recommendation", "").strip()
+
+        if any([summary_text, sentiment_text, risks_text, opportunities_text, recommendation_text]):
+            sentiment_label = _infer_sentiment_label(sentiment_text)
+            probability_map = {
+                "bullish": 0.68,
+                "bearish": 0.35,
+                "neutral": 0.52,
+            }
+            return {
+                "summary": summary_text or f"{symbol} analysis generated via {mode} mode.",
+                "sentiment": sentiment_label,
+                "risks": _split_sentences(risks_text) or ["No explicit risks extracted from model output."],
+                "opportunities": _split_sentences(opportunities_text) or ["No explicit opportunities extracted from model output."],
+                "recommendation": recommendation_text or "Wait for stronger confirmation before acting.",
+                "probability": probability_map.get(sentiment_label, 0.52),
+                "data_quality": "good",
+                "model_invoked": True,
+                "model_mode": mode,
+            }
+
     technical = llm_input.get("technical") or {}
     fundamental = llm_input.get("fundamental") or {}
     sentiment = llm_input.get("sentiment") or {}
@@ -633,4 +693,7 @@ def generate_ai_report(llm_input: dict) -> dict:
         "recommendation": recommendation,
         "probability": probability,
         "data_quality": "good",
+        "model_invoked": False,
+        "model_mode": mode,
+        "model_error": raw_report if _is_error_response(raw_report or "") else None,
     }
