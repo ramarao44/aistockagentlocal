@@ -558,3 +558,79 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
         f"{report_body}\n\n"
         f"{score_block}"
     )
+
+
+def generate_ai_report(llm_input: dict) -> dict:
+    """Build a contract-friendly AI output from pipeline context."""
+    symbol = llm_input.get("symbol") or "UNKNOWN"
+    timeframe = llm_input.get("timeframe") or "daily"
+    technical = llm_input.get("technical") or {}
+    fundamental = llm_input.get("fundamental") or {}
+    sentiment = llm_input.get("sentiment") or {}
+    trend = llm_input.get("trend") or {}
+    weights = llm_input.get("weights") or {}
+
+    trend_score = trend.get("trend_score")
+    news_sentiment = sentiment.get("news_sentiment")
+    pe = ((fundamental.get("valuation") or {}).get("pe"))
+    rsi = technical.get("rsi")
+
+    sentiment_label = "neutral"
+    if isinstance(trend_score, (int, float)):
+        if trend_score >= 65:
+            sentiment_label = "bullish"
+        elif trend_score <= 40:
+            sentiment_label = "bearish"
+
+    summary_parts = [
+        f"{symbol} on {timeframe} timeframe shows {sentiment_label} trend context.",
+    ]
+
+    if isinstance(rsi, (int, float)):
+        summary_parts.append(f"RSI is {round(rsi, 2)}, indicating momentum-aware positioning.")
+    if isinstance(news_sentiment, (int, float)):
+        summary_parts.append(f"News sentiment score is {news_sentiment}.")
+    if isinstance(pe, (int, float)):
+        summary_parts.append(f"Valuation reference P/E is {round(pe, 2)}.")
+
+    risks = []
+    if isinstance(rsi, (int, float)) and rsi >= 70:
+        risks.append("Momentum is extended and may trigger short-term pullback risk.")
+    if isinstance(news_sentiment, (int, float)) and news_sentiment < 0:
+        risks.append("Recent news tone is negative and can pressure near-term price action.")
+    if isinstance(trend_score, (int, float)) and trend_score < 45:
+        risks.append("Trend score is weak, so signal confidence remains limited.")
+    if not risks:
+        risks.append("No major red flags detected from current contract inputs.")
+
+    opportunities = []
+    if isinstance(trend_score, (int, float)) and trend_score >= 60:
+        opportunities.append("Trend strength supports momentum-aligned opportunities.")
+    if isinstance(news_sentiment, (int, float)) and news_sentiment > 0:
+        opportunities.append("Positive headline flow can reinforce upside continuation.")
+    opportunities.append(
+        "Timeframe weighting favors "
+        f"technical={((weights.get('model_weights') or {}).get('technical'))}, "
+        f"fundamental={((weights.get('model_weights') or {}).get('fundamental'))}, "
+        f"sentiment={((weights.get('model_weights') or {}).get('sentiment'))}."
+    )
+
+    if sentiment_label == "bullish":
+        recommendation = "Accumulate in staggered entries while maintaining stop-loss discipline."
+        probability = 0.68
+    elif sentiment_label == "bearish":
+        recommendation = "Reduce fresh exposure and wait for technical confirmation before re-entry."
+        probability = 0.35
+    else:
+        recommendation = "Hold neutral stance and wait for stronger directional confirmation."
+        probability = 0.52
+
+    return {
+        "summary": " ".join(summary_parts),
+        "sentiment": sentiment_label,
+        "risks": risks,
+        "opportunities": opportunities,
+        "recommendation": recommendation,
+        "probability": probability,
+        "data_quality": "good",
+    }

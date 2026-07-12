@@ -7,6 +7,7 @@ This folder contains project design, audit, roadmap, and testing documentation.
 - `DESIGN_DEVELOPMENT_DOCUMENT.md` - architecture, module specs, configuration, and test flow
 - `AUDIT_REPORT_2026_07_09.md` - implementation audit findings and remediations
 - `TEST_REPORT_2026-07-07.md` - historical test summary
+- `MANUAL_TESTING_COMMAND_PROMPT.md` - step-by-step manual testing commands for cmd.exe
 - `AI_INSTRUCTIONS.md` - contributor/agent operating rules
 - `PRODUCT_ROADMAP.md` - phase-wise delivery plan
 

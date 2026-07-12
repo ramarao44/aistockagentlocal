@@ -84,3 +84,20 @@ CREATE TABLE IF NOT EXISTS fundamental_data (
     last_updated TEXT,
     UNIQUE(ticker, period, as_of_date)
 );
+
+CREATE TABLE IF NOT EXISTS analysis_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    version TEXT DEFAULT '1.0',
+    symbol TEXT NOT NULL,
+    date TEXT NOT NULL,
+    timeframe TEXT,
+    ui_json TEXT,
+    market_data_json TEXT,
+    company_profile_json TEXT,
+    technical_json TEXT,
+    fundamental_json TEXT,
+    sentiment_json TEXT,
+    trend_json TEXT,
+    ai_json TEXT,
+    data_quality TEXT DEFAULT 'unknown'
+);

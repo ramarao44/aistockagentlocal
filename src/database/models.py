@@ -61,3 +61,25 @@ class AIReport(Base):
     recommendations = Column(Text)
 
     snapshot_time = Column(DateTime, default=datetime.utcnow)
+
+
+class AnalysisHistory(Base):
+    __tablename__ = "analysis_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    version = Column(String, default="1.0")
+    symbol = Column(String, index=True)
+    date = Column(String, index=True)
+    timeframe = Column(String, index=True)
+
+    ui_json = Column(JSON)
+    market_data_json = Column(JSON)
+    company_profile_json = Column(JSON)
+    technical_json = Column(JSON)
+    fundamental_json = Column(JSON)
+    sentiment_json = Column(JSON)
+    trend_json = Column(JSON)
+    ai_json = Column(JSON)
+
+    data_quality = Column(String, default="unknown")
+    snapshot_time = Column(DateTime, default=datetime.utcnow)
