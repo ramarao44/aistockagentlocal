@@ -7,6 +7,7 @@ import time
 import re
 from typing import Any, cast
 
+from src.core.artifacts import sanitize_name, timestamp_slug, write_json_artifact, write_text_artifact
 from src.core.debug import dbg
 from src.ingestion.market_fetcher import fetch_indian_stock_data
 from src.analysis.fundamental import analyze_fundamentals
@@ -511,6 +512,33 @@ def _is_error_response(text: str) -> bool:
     )
 
 
+def _debug_enabled(master: dict | None) -> bool:
+    ui_debug = bool((master or {}).get("ui", {}).get("debug", False))
+    env_debug = str(os.getenv("AISA_DEBUG", "0")).strip().lower() in {"1", "true", "yes", "on"}
+    return ui_debug or env_debug
+
+
+def _dump_llm_artifacts(master: dict | None, ticker: str, mode: str, prompt: str, report: str) -> None:
+    if not _debug_enabled(master):
+        return
+
+    ts = timestamp_slug()
+    safe_ticker = sanitize_name(ticker, default="unknown")
+
+    write_text_artifact("llm", f"prompt_{ts}_{safe_ticker}.txt", prompt)
+    write_json_artifact(
+        "llm",
+        f"reasoning_{ts}_{safe_ticker}.json",
+        {
+            "ticker": ticker,
+            "mode": mode,
+            "prompt_length": len(prompt or ""),
+            "output_length": len(report or ""),
+            "report": report,
+        },
+    )
+
+
 def _split_sentences(text: str) -> list[str]:
     return [chunk.strip() for chunk in re.split(r"(?<=[.!?])\s+", (text or "").strip()) if chunk.strip()]
 
@@ -549,7 +577,9 @@ def generate_llm_report(ticker: str, mode: str = "local", master: dict | None = 
     standardized_prompt = _build_standardized_report_prompt(market_snapshot)
 
     if mode_value == "cloud":
-        return run_cloud_llm(standardized_prompt, master=master)
+        cloud_report = run_cloud_llm(standardized_prompt, master=master)
+        _dump_llm_artifacts(master, ticker, mode_value, standardized_prompt, cloud_report)
+        return cloud_report
 
     optimized = mode_value in {"optimized", "token_optimized", "token-optimized", "fast"}
     dbg(master, "AI.LLM", "MODE", "OK", f"Running {'optimized' if optimized else 'standard'} mode")
@@ -574,11 +604,14 @@ def generate_llm_report(ticker: str, mode: str = "local", master: dict | None = 
     elapsed = time.time() - start_time
     dbg(master, "AI.LLM", "END", "OK", "Report generation completed", t=round(elapsed * 1000, 2))
 
-    return (
+    final_report = (
         f"AI Stock Report ({'Optimized' if optimized else 'Standard'}) for {market_data.get('ticker', ticker)}\n\n"
         f"{report_body}\n\n"
         f"{score_block}"
     )
+
+    _dump_llm_artifacts(master, ticker, mode_value, standardized_prompt, final_report)
+    return final_report
 
 
 def generate_ai_report(llm_input: dict) -> dict:

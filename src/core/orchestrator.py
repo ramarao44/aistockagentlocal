@@ -22,6 +22,7 @@ from src.core.contracts.timeframe_contract import TIMEFRAME_CONTRACT_V1
 from src.core.contracts.trend_contract import TREND_CONTRACT_V1
 from src.core.contracts.ui_contract import UI_CONTRACT_V1
 from src.core.debug import dbg
+from src.core.artifacts import ensure_gen_dirs, sanitize_name, timestamp_slug, write_json_artifact, write_text_artifact
 from src.database.crud import save_analysis_snapshot
 from email_sender import send_email_to
 from html_formatter import format_html_report
@@ -170,7 +171,50 @@ def _append_module(master: dict, module_key: str) -> None:
     master["orchestrator"]["modules_triggered"].append(MODULE_MAP[module_key])
 
 
+def _persist_pipeline_artifacts(master: dict) -> None:
+    ensure_gen_dirs()
+
+    ts = timestamp_slug()
+    symbol = sanitize_name(master.get("symbol"), default="unknown")
+    run_base = f"run_{ts}_{symbol}"
+
+    run_json_path = write_json_artifact("pipeline-runs", f"{run_base}.json", master)
+
+    html_report = ((master.get("llm_context") or {}).get("html_report") or "").strip()
+    run_html_path = None
+    report_html_path = None
+    if html_report:
+        run_html_path = write_text_artifact("pipeline-runs", f"{run_base}.html", html_report)
+        report_html_path = write_text_artifact("reports", f"daily_report_{ts}_{symbol}.html", html_report)
+
+    debug_json_path = None
+    debug_log_path = None
+    debug_entries = master.get("debug") or []
+    debug_enabled = bool(master.get("ui", {}).get("debug", False))
+    if debug_enabled and debug_entries:
+        debug_base = f"debug_{ts}_{symbol}"
+        debug_json_path = write_json_artifact("debug", f"{debug_base}.json", debug_entries)
+        debug_lines = [
+            f"{item.get('m')}|{item.get('a')}|{item.get('s')}|{item.get('msg')}|{item.get('t')}"
+            for item in debug_entries
+        ]
+        debug_log_path = write_text_artifact("debug", f"{debug_base}.log", "\n".join(debug_lines))
+
+    master.setdefault("artifacts", {})
+    master["artifacts"].update(
+        {
+            "pipeline_run_json": str(run_json_path),
+            "pipeline_run_html": str(run_html_path) if run_html_path else None,
+            "report_html": str(report_html_path) if report_html_path else None,
+            "debug_json": str(debug_json_path) if debug_json_path else None,
+            "debug_log": str(debug_log_path) if debug_log_path else None,
+        }
+    )
+    dbg(master, "ORCH.ARTIFACTS", "WRITE", "OK", f"Saved run artifacts to {run_json_path}")
+
+
 def run_pipeline(symbol: str | None = None, ui_payload: dict | None = None) -> dict:
+    ensure_gen_dirs()
     master = deepcopy(MASTER_CONTRACT_V1)
     master["orchestrator"] = deepcopy(ORCHESTRATOR_CONTRACT_V1)
     master["orchestrator"]["status"] = "running"
@@ -186,6 +230,7 @@ def run_pipeline(symbol: str | None = None, ui_payload: dict | None = None) -> d
     if not ui_contract.get("symbol"):
         _add_error(master, "orchestrator", "Symbol is required", severity="critical")
         master["orchestrator"]["status"] = "failed"
+        _persist_pipeline_artifacts(master)
         dbg(master, "ORCH.PIPELINE", "END", "ERR", "Pipeline failed: missing symbol")
         return master
 
@@ -203,6 +248,7 @@ def run_pipeline(symbol: str | None = None, ui_payload: dict | None = None) -> d
         if not market_snapshot.get("success"):
             _add_error(master, "market_fetcher", "Failed to fetch market snapshot", market_snapshot)
             master["orchestrator"]["status"] = "failed"
+            _persist_pipeline_artifacts(master)
             dbg(master, "ORCH.PIPELINE", "END", "ERR", "Pipeline failed: market snapshot unavailable")
             return master
         dbg(master, "INGESTION.MARKET", "FETCH", "OK", "Market snapshot fetched")
@@ -338,11 +384,13 @@ def run_pipeline(symbol: str | None = None, ui_payload: dict | None = None) -> d
 
         master["data_quality"] = history["data_quality"]
         master["orchestrator"]["status"] = "complete"
+        _persist_pipeline_artifacts(master)
         dbg(master, "ORCH.PIPELINE", "END", "OK", "Pipeline completed")
         return master
 
     except Exception as exc:
         _add_error(master, "orchestrator", "Unhandled pipeline failure", details=str(exc), severity="critical")
         master["orchestrator"]["status"] = "failed"
+        _persist_pipeline_artifacts(master)
         dbg(master, "ORCH.PIPELINE", "END", "ERR", "Pipeline failed")
         return master

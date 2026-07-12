@@ -318,7 +318,12 @@ def test_generate_ai_report_invokes_model_path_with_mode():
     with patch("src.ai.llm_reasoner.generate_llm_report", return_value=model_report) as model_mock:
         payload = llm_reasoner.generate_ai_report(llm_input)
 
-    model_mock.assert_called_once_with("RELIANCE", mode="cloud")
+    model_mock.assert_called_once()
+    call_args, call_kwargs = model_mock.call_args
+    assert call_args[0] == "RELIANCE"
+    assert call_kwargs.get("mode") == "cloud"
+    # Current implementation forwards master context explicitly.
+    assert "master" in call_kwargs
     assert payload["model_invoked"] is True
     assert payload["model_mode"] == "cloud"
     assert payload["sentiment"] == "bullish"

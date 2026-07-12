@@ -1,0 +1,30 @@
+run_id,updated_at,requirement_id,feature,requirement_title,status,evidence_quality,owner,mapped_test_count,passing_test_count
+1783858682,2026-07-12T12:18:02+00:00,FR-1.1,market-data-fetcher,Ticker Normalization,Working,automated,Data Ingestion,2,2
+1783858682,2026-07-12T12:18:02+00:00,FR-1.2,market-data-fetcher,Price History Fetching,Working,automated,Data Ingestion,2,2
+1783858682,2026-07-12T12:18:02+00:00,FR-1.3,market-data-fetcher,Intraday Data,Working,smoke,Data Ingestion,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-2.1,technical-indicators,RSI,Working,smoke,Technical Analysis,7,7
+1783858682,2026-07-12T12:18:02+00:00,FR-2.2,technical-indicators,MACD,Working,smoke,Technical Analysis,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-2.3,technical-indicators,Moving Averages,Working,smoke,Technical Analysis,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-2.4,technical-indicators,SuperTrend,Working,smoke,Technical Analysis,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-2.5,technical-indicators,VWAP,Working,smoke,Technical Analysis,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-2.6,technical-indicators,ADX,Working,smoke,Technical Analysis,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-2.7,technical-indicators,Bollinger Bands,Working,smoke,Technical Analysis,0,0
+1783858682,2026-07-12T12:18:02+00:00,FR-2.8,technical-indicators,Volume Breakout,Working,smoke,Technical Analysis,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-3.1,database-layer,SQLite Database Setup,Working,smoke,Database,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-3.2,database-layer,Market Data Storage,Working,smoke,Database,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-3.3,database-layer,Indicator Storage,Working,smoke,Database,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-3.4,database-layer,News and Sentiment Storage,Working,automated,Database,9,9
+1783858682,2026-07-12T12:18:02+00:00,FR-3.5,database-layer,Data Retrieval,Working,smoke,Database,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-4.1,llm-reasoning,Local LLM Integration,Working,automated,AI Reasoning,7,7
+1783858682,2026-07-12T12:18:02+00:00,FR-4.2,llm-reasoning,Cloud LLM Fallback,Working,automated,AI Reasoning,2,2
+1783858682,2026-07-12T12:18:02+00:00,FR-4.3,llm-reasoning,Report Generation,Working,automated,AI Reasoning,13,13
+1783858682,2026-07-12T12:18:02+00:00,FR-4.4,llm-reasoning,Prompt Engineering,Working,smoke,AI Reasoning,0,0
+1783858682,2026-07-12T12:18:02+00:00,FR-4.5,llm-reasoning,Token Optimization Mode,Working,automated,AI Reasoning,2,2
+1783858682,2026-07-12T12:18:02+00:00,FR-5.1,charts-visualization,Price Trend Chart,Not Working,pending,Pending Input,0,0
+1783858682,2026-07-12T12:18:02+00:00,FR-5.2,charts-visualization,RSI Chart,Not Working,pending,Pending Input,0,0
+1783858682,2026-07-12T12:18:02+00:00,FR-5.3,charts-visualization,MACD Chart,Not Working,pending,Pending Input,0,0
+1783858682,2026-07-12T12:18:02+00:00,FR-5.4,charts-visualization,Bollinger Bands Chart,Not Working,pending,Pending Input,0,0
+1783858682,2026-07-12T12:18:02+00:00,FR-5.5,charts-visualization,Volume Breakout Visualization,Not Working,pending,Pending Input,0,0
+1783858682,2026-07-12T12:18:02+00:00,FR-6.1,cloud-llm-integration,OpenAI Cloud Integration,Working,automated,AI Reasoning,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-6.2,cloud-llm-integration,Model Selection,Working,automated,AI Reasoning,1,1
+1783858682,2026-07-12T12:18:02+00:00,FR-6.3,cloud-llm-integration,Fallback Mechanism,Working,automated,AI Reasoning,9,9

@@ -1,9 +1,14 @@
 import asyncio
 import json
 import os
+from pathlib import Path
 
 import chainlit as cl
+from dotenv import load_dotenv
 from src.core.orchestrator import run_pipeline
+
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 
 def _env_bool(name: str, default: str = "0") -> bool:

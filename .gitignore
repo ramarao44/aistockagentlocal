@@ -23,6 +23,7 @@ venv/
 # Logs
 logs/
 *.log
+gen/
 
 # OS files
 .DS_Store
