@@ -6,6 +6,7 @@ from datetime import datetime
 
 import yfinance as yf
 
+from src.core.debug import dbg
 from src.database.sqlite_legacy import save_fundamental_data
 
 from .balance_sheet import extract_balance_sheet_items
@@ -53,7 +54,8 @@ def _build_data_quality(sections: dict) -> dict:
     }
 
 
-def analyze_fundamentals(ticker: str, period: str = "quarterly", persist: bool = True) -> dict:
+def analyze_fundamentals(ticker: str, period: str = "quarterly", persist: bool = True, master: dict | None = None) -> dict:
+    dbg(master, "ANALYSIS.FUNDAMENTAL", "START", "OK", f"Analyzing fundamentals for {ticker}")
     period_value = (period or "quarterly").strip().lower()
     if period_value not in {"quarterly", "annual"}:
         period_value = "quarterly"
@@ -89,9 +91,13 @@ def analyze_fundamentals(ticker: str, period: str = "quarterly", persist: bool =
     }
 
     growth = calculate_growth_metrics(current_income, prev_income_q, prev_income_y)
+    dbg(master, "ANALYSIS.FUNDAMENTAL", "GROWTH", "OK", "Computed growth metrics")
     valuation = calculate_valuation_metrics(price_snapshot, current_income, current_balance, growth)
+    dbg(master, "ANALYSIS.FUNDAMENTAL", "VALUATION", "OK", "Computed valuation ratios")
     profitability = calculate_profitability_metrics(current_income, current_balance)
+    dbg(master, "ANALYSIS.FUNDAMENTAL", "PROFITABILITY", "OK", "Computed profitability metrics")
     risk = calculate_risk_metrics(price_snapshot, current_income, current_balance)
+    dbg(master, "ANALYSIS.FUNDAMENTAL", "RISK", "OK", "Computed risk metrics")
     financial_ratios = combine_financial_ratios(valuation, growth, profitability, risk)
 
     payload = {
@@ -122,7 +128,9 @@ def analyze_fundamentals(ticker: str, period: str = "quarterly", persist: bool =
     if persist:
         try:
             save_fundamental_data(payload)
-        except Exception:
-            pass
+            dbg(master, "ANALYSIS.FUNDAMENTAL", "PERSIST", "OK", "Persisted fundamentals")
+        except Exception as exc:
+            dbg(master, "ANALYSIS.FUNDAMENTAL", "PERSIST", "WARN", str(exc))
 
+    dbg(master, "ANALYSIS.FUNDAMENTAL", "END", "OK", "Fundamental analysis complete")
     return payload

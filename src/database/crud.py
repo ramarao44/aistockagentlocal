@@ -1,5 +1,6 @@
 from .engine import SessionLocal, engine
 from .models import StockDaily, AIReport, AnalysisHistory
+from src.core.debug import dbg
 
 
 def save_daily_record(data: dict):
@@ -90,7 +91,7 @@ def get_sentiment_history(symbol: str, n: int = 30):
         db.close()
 
 
-def save_analysis_snapshot(history: dict):
+def save_analysis_snapshot(history: dict, master: dict | None = None):
     db = SessionLocal()
     try:
         AnalysisHistory.__table__.create(bind=engine, checkfirst=True)
@@ -112,6 +113,10 @@ def save_analysis_snapshot(history: dict):
         db.add(row)
         db.commit()
         db.refresh(row)
+        dbg(master, "DB.CRUD", "SAVE", "OK", "Saved analysis snapshot")
         return row
+    except Exception as exc:
+        dbg(master, "DB.CRUD", "SAVE", "ERR", str(exc))
+        raise
     finally:
         db.close()

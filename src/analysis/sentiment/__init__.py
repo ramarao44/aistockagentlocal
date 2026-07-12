@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from src.core.debug import dbg
+
 
 POSITIVE_WORDS = {
 	"beat", "growth", "surge", "upgrade", "profit", "bullish", "strong", "outperform", "gain",
@@ -23,7 +25,8 @@ def _headline_score(headline: str) -> float:
 	return max(-1.0, min(1.0, round(score, 3)))
 
 
-def compute_sentiment_scores(top_news: list[dict] | None) -> dict:
+def compute_sentiment_scores(top_news: list[dict] | None, master: dict | None = None) -> dict:
+	dbg(master, "ANALYSIS.SENTIMENT", "SCORE", "OK", "Computing sentiment score")
 	items = top_news or []
 	scores = []
 	normalized_news = []
@@ -41,6 +44,7 @@ def compute_sentiment_scores(top_news: list[dict] | None) -> dict:
 		)
 
 	avg = round(sum(scores) / len(scores), 3) if scores else 0.0
+	dbg(master, "ANALYSIS.SENTIMENT", "SCORE", "OK", f"Computed sentiment for {len(normalized_news)} headlines")
 	return {
 		"news_sentiment": avg,
 		"social_sentiment": None,
