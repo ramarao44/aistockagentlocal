@@ -7,8 +7,11 @@
 ## 1️⃣ RUN ALL TESTS (Non-Negotiable)
 
 ```bash
-# Preferred: unified build wrapper (includes tests)
-python scripts/build.py --profile ci
+# Required for non-trivial changes: CR gate first
+python scripts/build.py --profile cr-impact-check --cr-id CR-YYYYMMDD-XXX
+
+# Required gated build (includes tests + docs packaging)
+python scripts/build.py --profile ci --cr-id CR-YYYYMMDD-XXX
 
 # Or profile launcher on Windows
 build-profiles\ci.bat
@@ -31,6 +34,7 @@ build-profiles\ci.bat
   ```
 - [ ] **docs/LESSONS_LEARNED.md** - Add if new patterns discovered
 - [ ] **docs/QUICK_REFERENCE.md** - Update if commands changed
+- [ ] **feature-requirements/** - Update impacted requirement/acceptance criteria file when behavior changes
 
 ---
 
@@ -56,6 +60,9 @@ build-profiles\ci.bat
 git status              # Verify no surprise files
 git add .              # Stage all changes
 git commit -m "type: description - date"
+# Provide CR id to pre-push hook enforcement
+$env:AISA_CR_ID="CR-YYYYMMDD-XXX"   # PowerShell
+# Bash alternative: export AISA_CR_ID=CR-YYYYMMDD-XXX
 git push               # Upload to remote
 ```
 

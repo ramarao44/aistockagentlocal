@@ -72,7 +72,7 @@ Direct command examples:
 
 ```powershell
 python scripts/build.py --debug on --tests off --docs on --clean on
-python scripts/build.py --profile ci
+python scripts/build.py --profile ci --cr-id CR-YYYYMMDD-XXX
 ```
 
 Windows profile launchers:
@@ -99,6 +99,24 @@ build-profiles\all-profiles-smoke.bat full
 ```
 
 Generated build documentation output is packaged in `build/docs` when `docs=on`.
+
+### Clean Scope Policy (Hard Rule)
+
+`clean=on` is restricted to disposable generated outputs only. Governance and canonical documentation paths are protected and must never be cleaned by default build commands.
+
+Included in clean:
+- `build/docs/**`
+- `gen/debug/**`
+- `gen/llm/**`
+- `gen/pipeline-runs/**`
+- `gen/reports/**`
+- `gen/tmp/**`
+
+Excluded from clean (must never be deleted):
+- `docs/**` (including `docs/baseline/**` and `docs/change-requests/**`)
+- `gen/docs/**` governance artifacts
+- `reports/**` canonical evidence outputs
+- source and test roots (`src/**`, `scripts/**`, `tests/**`, `data/**`, `feature-requirements/**`)
 
 ## Baseline and Change Request Workflow
 
