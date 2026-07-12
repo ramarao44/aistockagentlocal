@@ -26,6 +26,33 @@
 
 ---
 
+## 📐 BASELINE + CHANGE REQUEST GOVERNANCE (MANDATORY)
+
+For non-trivial changes, AI must follow baseline-driven workflow before implementation:
+
+1. Use active baseline from `docs/baseline/active_baseline.json`.
+2. Work inside a CR folder under `docs/change-requests/CR-YYYYMMDD-XXX`.
+3. Treat `baseline-copy` as immutable.
+4. Apply changes only in `proposed`.
+5. Complete impact analysis with required sections:
+  - Changed Documents
+  - Code Impact
+  - Test Impact
+  - Risks and Rollback
+  - Consistency Updates
+6. Implementation may start only when CR status is `approved`.
+7. All implementation prompts must include CR id and baseline id.
+
+Validation helper commands:
+
+```powershell
+python scripts/build.py --profile baseline-sync
+python scripts/build.py --profile cr-prepare --cr-id CR-20260713-001 --cr-title "example"
+python scripts/build.py --profile cr-impact-check --cr-id CR-20260713-001
+```
+
+---
+
 ## 🎓 INTERACTIVE LEARNING FRAMEWORK - READ BEFORE ANY CHANGE
 
 **This project is YOUR learning platform for AI product leadership.** Every change must be educational and decision-making oriented.

@@ -13,8 +13,7 @@ import traceback
 import unittest
 from datetime import datetime, timezone
 
-
-ROOT = r"C:\RAMARAO\Learning\AI\N8N\aistockagentlocal"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPORTS_DIR = os.path.join(ROOT, "reports")
 TRACEABILITY_PATH = os.path.join(ROOT, "gen", "docs", "requirement_test_traceability.json")
 

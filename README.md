@@ -59,6 +59,71 @@ python scripts/test_reasoning.py
 python scripts/test_ai_report.py
 ```
 
+## Unified Build Command (4 Switches)
+
+Use one command with only these toggles:
+
+- `debug`: `on|off`
+- `tests`: `on|off`
+- `docs`: `on|off`
+- `clean`: `on|off`
+
+Direct command examples:
+
+```powershell
+python scripts/build.py --debug on --tests off --docs on --clean on
+python scripts/build.py --profile ci
+```
+
+Windows profile launchers:
+
+```powershell
+build-profiles\quick.bat
+build-profiles\dev.bat
+build-profiles\ci.bat
+build-profiles\release.bat
+build-profiles\all-profiles-smoke.bat
+build-profiles\baseline-sync.bat
+build-profiles\cr-prepare.bat CR-YYYYMMDD-XXX "title"
+build-profiles\cr-impact-check.bat CR-YYYYMMDD-XXX
+```
+
+Smoke script modes:
+
+```powershell
+# Fast profile wiring validation (default)
+build-profiles\all-profiles-smoke.bat
+
+# Full run using each profile defaults
+build-profiles\all-profiles-smoke.bat full
+```
+
+Generated build documentation output is packaged in `build/docs` when `docs=on`.
+
+## Baseline and Change Request Workflow
+
+1. Generate baseline snapshot from original docs:
+
+```powershell
+python scripts/build.py --profile baseline-sync
+```
+
+2. Prepare a change request from active baseline:
+
+```powershell
+python scripts/build.py --profile cr-prepare --cr-id CR-20260713-001 --cr-title "example"
+```
+
+3. Update only files under `docs/change-requests/<CR-ID>/proposed`.
+
+4. Complete impact analysis and set CR status to `approved`.
+
+5. Validate implementation gate before coding:
+
+```powershell
+python scripts/build.py --profile cr-impact-check --cr-id CR-20260713-001
+```
+
 ## Webhook Test Runner
 
 `run_tests.py` posts to webhook URL from `TEST_REPORT_URL` environment variable.

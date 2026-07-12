@@ -32,3 +32,4 @@ Current non-implemented items are tracked under feature `charts-visualization` i
 ## Notes
 - This file stays concise by design.
 - Do not duplicate large status tables here; use linked CSV views.
+- For non-trivial changes, status claims should map to an approved change request under `docs/change-requests/` with linked impact analysis and test evidence.

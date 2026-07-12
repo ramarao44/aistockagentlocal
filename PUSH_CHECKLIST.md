@@ -7,9 +7,11 @@
 ## 1️⃣ RUN ALL TESTS (Non-Negotiable)
 
 ```bash
-python -m scripts.test_mvp
-python -m scripts.test_db  
-python -m scripts.test_llm_reasoning
+# Preferred: unified build wrapper (includes tests)
+python scripts/build.py --profile ci
+
+# Or profile launcher on Windows
+build-profiles\ci.bat
 ```
 
 ### ❌ STOP IF ANY TEST FAILS
@@ -44,6 +46,7 @@ python -m scripts.test_llm_reasoning
 - [ ] Error handling added for external dependencies (APIs, databases)
 - [ ] Logging added for important operations
 - [ ] User is aware: What changed and why?
+- [ ] Non-trivial changes reference an approved CR with completed impact analysis
 
 ---
 

@@ -24,6 +24,7 @@ venv/
 logs/
 *.log
 gen/
+build/
 
 # OS files
 .DS_Store

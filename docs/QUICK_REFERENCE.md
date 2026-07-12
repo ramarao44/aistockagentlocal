@@ -1,6 +1,6 @@
 # Quick Reference - AI Stock Agent
 
-**Last Updated:** 2026-07-11
+**Last Updated:** 2026-07-13
 
 ---
 
@@ -23,6 +23,26 @@ python local_server.py
 
 # Check Ollama
 curl http://localhost:11434/api/tags
+
+# Unified build (4 toggles)
+python scripts/build.py --profile dev
+python scripts/build.py --debug on --tests off --docs on --clean on
+
+# Windows profile launchers
+build-profiles\quick.bat
+build-profiles\dev.bat
+build-profiles\ci.bat
+build-profiles\release.bat
+build-profiles\all-profiles-smoke.bat
+build-profiles\all-profiles-smoke.bat full
+build-profiles\baseline-sync.bat
+build-profiles\cr-prepare.bat CR-YYYYMMDD-XXX "title"
+build-profiles\cr-impact-check.bat CR-YYYYMMDD-XXX
+
+# Baseline + CR workflow
+python scripts/build.py --profile baseline-sync
+python scripts/build.py --profile cr-prepare --cr-id CR-20260713-001 --cr-title "example"
+python scripts/build.py --profile cr-impact-check --cr-id CR-20260713-001
 ```
 
 ---
