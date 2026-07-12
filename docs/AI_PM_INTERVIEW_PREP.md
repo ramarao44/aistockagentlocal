@@ -130,7 +130,7 @@ Features often have implicit data constraints that must be discovered during des
 
 **References:**
 - [AUDIT_REPORT_2026_07_09.md#issue-2-ma200-returns-none-high](./AUDIT_REPORT_2026_07_09.md) - Detailed analysis
-- [src/fetcher/market_fetcher.py](../src/fetcher/market_fetcher.py) - Line 53: period="1y" (was "6mo")
+- [src/ingestion/market_fetcher.py](../src/ingestion/market_fetcher.py) - Line 53: period="1y" (was "6mo")
 - [reports/TEST_REPORT_AUDIT_2026_07_09.md](../reports/TEST_REPORT_AUDIT_2026_07_09.md) - Test results showing MA200 now working
 
 ---
@@ -171,7 +171,7 @@ External dependencies (APIs, web scraping) are fragile. You must decide: is this
 
 **References:**
 - [AUDIT_REPORT_2026_07_09.md#issue-3-delivery-volume-returns-none-high](./AUDIT_REPORT_2026_07_09.md) - Issue #3 analysis
-- [src/fetcher/market_fetcher.py](../src/fetcher/market_fetcher.py) - Error handling implementation
+- [src/ingestion/market_fetcher.py](../src/ingestion/market_fetcher.py) - Error handling implementation
 - [PRODUCT_ROADMAP.md](./PRODUCT_ROADMAP.md) - Known limitations documented
 
 ---

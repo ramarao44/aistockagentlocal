@@ -54,14 +54,14 @@
 - Cloud mode still requires `OPENAI_API_KEY`; missing key path validated and handled
 
 ## Source Code Areas Covered
-- `src/reasoning/llm_reasoner.py`
+- `src/ai/llm_reasoner.py`
 - `scripts/test_llm_reasoning.py`
 - `scripts/test_ai_report.py`
 - `scripts/test_reasoning.py`
-- `src/fetcher/market_fetcher.py`
+- `src/ingestion/market_fetcher.py`
 
 ## Debug Prints Added to Source
-- Added timing and model tracking in `src/reasoning/llm_reasoner.py`:
+- Added timing and model tracking in `src/ai/llm_reasoner.py`:
   - `run_model()` - Tracks model, prompt length, elapsed time, return code
   - All reasoning functions log model selection
   - `generate_llm_report()` - Tracks overall timing
@@ -69,7 +69,7 @@
 ## Known Issues / Debugging Notes
 ### "Could not reach the server" Error (h11 LocalProtocolError)
 - Root cause: Chainlit's h11 HTTP layer times out when LLM subprocess calls block the event loop
-- Fixed by using `asyncio.to_thread()` in `app.py` to run LLM calls in a thread pool
+- Fixed by using `asyncio.to_thread()` in `main.py` to run LLM calls in a thread pool
 - Also added `timeout = 300` to `.chainlit/config.toml` under `[server]` section
 - Subprocess timeout is set to 120 seconds in `run_model()`
 

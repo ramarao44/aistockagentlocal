@@ -20,7 +20,7 @@
 ---
 
 ## 📝 Change Log
-- **2026-07-11:** Standardized LLM output to a fixed 6-section evaluation format with strict validation, retry, and deterministic fallback in `src/reasoning/llm_reasoner.py` - ensures machine-parsable, deterministic report structure for cross-model comparison.
+- **2026-07-11:** Standardized LLM output to a fixed 6-section evaluation format with strict validation, retry, and deterministic fallback in `src/ai/llm_reasoner.py` - ensures machine-parsable, deterministic report structure for cross-model comparison.
 - **2026-07-11:** Added deterministic section scoring (`0-5` each, total `0-30`) appended as `SectionScore` lines in report output - enables quantifiable model evaluation and easy downstream parsing.
 - **2026-07-11:** Added compatibility-safe Ollama execution (`--no-ansi` first, auto-retry without flag on older CLI versions) and aligned test suites (`scripts/test_llm_reasoning.py`, `scripts/test_ai_report.py`, `scripts/test_reasoning.py`) - prevents runtime breaks while preserving clean output intent.
 - **2026-07-10:** Fixed h11 LocalProtocolError in Chainlit app by using `asyncio.to_thread()` for non-blocking LLM calls - prevents HTTP connection errors when running multiple subprocess-based LLM calls; added comprehensive debug prints to trace LLM operations; added timeout configuration to Chainlit config (300s server timeout, 120s subprocess timeout).
@@ -219,16 +219,16 @@ A **local-first, privacy-preserving AI agent** for stock market analysis focused
 ### Component Diagram
 ```
 aistockagentlocal/
-├── UI Layer: app.py (Chainlit)
+├── UI Layer: main.py (Chainlit)
 ├── API Layer: local_server.py (FastAPI)
 ├── Core Layer:
-│   ├── src/reasoning/llm_reasoner.py
-│   ├── src/fetcher/market_fetcher.py
-│   ├── src/analyzer/technical_analyzer.py
-│   └── src/analysis/trend_score.py
+│   ├── src/ai/llm_reasoner.py
+│   ├── src/ingestion/market_fetcher.py
+│   ├── src/analysis/technical/technical_analyzer.py
+│   └── src/analysis/trend/trend_score.py
 ├── Data Layer:
 │   ├── src/database/ (SQLAlchemy)
-│   └── src/db/database.py (SQLite)
+│   └── src/database/sqlite_legacy.py (SQLite)
 └── Utilities:
     ├── email_sender.py
     ├── html_formatter.py
@@ -242,7 +242,7 @@ aistockagentlocal/
 ### Root Files
 | File | Purpose |
 |------|---------|
-| `app.py` | Chainlit UI entrypoint - handles user input and displays reports |
+| `main.py` | Chainlit UI entrypoint - handles user input and displays reports |
 | `local_server.py` | FastAPI webhook server for receiving reports |
 | `scheduler.py` | APScheduler for daily automated jobs |
 | `email_sender.py` | Gmail SMTP integration for report delivery |
@@ -252,20 +252,20 @@ aistockagentlocal/
 
 ### Source Modules (`src/`)
 
-#### `src/reasoning/llm_reasoner.py`
+#### `src/ai/llm_reasoner.py`
 Main LLM integration module. Handles:
 - Local LLM calls via Ollama subprocess (`ollama run <model>`)
 - Cloud LLM calls via OpenAI
 - Mode-aware report generation with real market data (`local`, `optimized`, `cloud`)
 - Fallback from local to cloud when enabled
 
-#### `src/reasoning/reasoning_node.py`
+#### `src/ai/reasoning_node.py`
 Report generation utilities:
 - `generate_daily_summary()` - Creates daily summary from DB
 - `generate_trend_analysis()` - Multi-day trend analysis
 - `generate_combined_report()` - Combined daily + trend report
 
-#### `src/fetcher/market_fetcher.py`
+#### `src/ingestion/market_fetcher.py`
 Core market data fetching:
 - `normalize_ticker()` - Converts user input to NSE/BSE format
 - `fetch_price_history()` - yfinance integration
@@ -281,19 +281,19 @@ Core market data fetching:
 - `calculate_pivot_points()` - Pivot point calculation
 - `fetch_indian_stock_data()` - Main wrapper for Indian stocks
 
-#### `src/fetcher/news_fetcher.py`
+#### `src/ingestion/news_fetcher.py`
 News fetching via Yahoo Finance RSS:
 - `fetch_news()` - RSS feed parsing
 
-#### `src/analyzer/technical_analyzer.py`
+#### `src/analysis/technical/technical_analyzer.py`
 Technical indicator computation using `ta` library:
 - `compute_indicators()` - RSI, MACD, MA20, MA50
 
-#### `src/analyzer/sentiment_analyzer.py`
+#### `src/analysis/sentiment/sentiment_analyzer.py`
 Sentiment analysis using VADER:
 - `compute_sentiment()` - Returns compound sentiment score
 
-#### `src/analysis/trend_score.py`
+#### `src/analysis/trend/trend_score.py`
 Trend Score 2.0 algorithm:
 - `compute_trend_score()` - Weighted scoring (0-100)
 
@@ -303,7 +303,7 @@ SQLAlchemy database layer:
 - `models.py` - SQLAlchemy models
 - `crud.py` - Create/Read/Update/Delete operations
 
-#### `src/db/database.py`
+#### `src/database/sqlite_legacy.py`
 SQLite database operations:
 - `save_market_data()` - Store OHLCV data
 - `save_indicators()` - Store technical indicators
@@ -325,7 +325,7 @@ Logging utilities:
 ### Core Functions
 
 #### `fetch_indian_stock_data(user_input: str) -> dict`
-**Location:** `src/fetcher/market_fetcher.py`
+**Location:** `src/ingestion/market_fetcher.py`
 **Purpose:** Main entry point for fetching Indian stock data
 **Parameters:**
 - `user_input` - Stock ticker (e.g., "RELIANCE", "TCS.NS", "INFY.BO")
@@ -361,7 +361,7 @@ Logging utilities:
 ```
 
 #### `generate_llm_report(ticker: str, mode: str = "local") -> str`
-**Location:** `src/reasoning/llm_reasoner.py`
+**Location:** `src/ai/llm_reasoner.py`
 **Purpose:** Generate AI-powered stock analysis report
 **Parameters:**
 - `ticker` - Stock symbol
@@ -372,14 +372,14 @@ Logging utilities:
 - Trend Score Logic
 
 #### `run_model(model: str, prompt: str) -> str`
-**Location:** `src/reasoning/llm_reasoner.py`
+**Location:** `src/ai/llm_reasoner.py`
 **Purpose:** Execute local LLM through subprocess
 **Behavior:**
 - Calls `ollama run <model>`
 - Returns normalized local error markers for non-zero exit, timeout, missing command, or empty output
 
 #### `compute_trend_score(data: dict) -> float`
-**Location:** `src/analysis/trend_score.py`
+**Location:** `src/analysis/trend/trend_score.py`
 **Purpose:** Calculate weighted trend score (0-100)
 **Parameters:**
 ```python
@@ -568,7 +568,7 @@ ENABLE_CLOUD_FALLBACK=1
 #### `scripts/test_mvp.py`
 Tests the complete analysis pipeline:
 ```python
-from src.fetcher.market_fetcher import analyze_stock
+from src.ingestion.market_fetcher import analyze_stock
 result = analyze_stock("RELIANCE")
 # Returns: {"success": bool, "data": dict, "report": str}
 ```
@@ -604,7 +604,7 @@ python -m scripts.test_reasoning
 python -m scripts.test_ai_report
 
 # Run Chainlit UI
-chainlit run app.py
+chainlit run main.py
 
 # Run API server
 python local_server.py
@@ -629,7 +629,7 @@ ollama pull llama3.2:3b
 ollama pull phi3:3.8b
 
 # 4. Run application
-chainlit run app.py
+chainlit run main.py
 ```
 
 ### Production Options
@@ -683,7 +683,7 @@ chainlit run app.py
 python -m scripts.test_mvp
 
 # Run UI
-chainlit run app.py
+chainlit run main.py
 
 # Run server
 python local_server.py
@@ -693,9 +693,9 @@ curl http://localhost:11434/api/tags
 ```
 
 ### File Locations
-- **UI:** `app.py`
-- **LLM:** `src/reasoning/llm_reasoner.py`
-- **Fetcher:** `src/fetcher/market_fetcher.py`
+- **UI:** `main.py`
+- **LLM:** `src/ai/llm_reasoner.py`
+- **Fetcher:** `src/ingestion/market_fetcher.py`
 - **Database:** `src/database/`
 - **Tests:** `scripts/`
 - **Config:** `.env`

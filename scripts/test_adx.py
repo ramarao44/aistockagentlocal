@@ -1,4 +1,4 @@
-from src.fetcher.market_fetcher import fetch_indian_stock_data
+from src.ingestion.market_fetcher import fetch_indian_stock_data
 
 tickers = ["RELIANCE", "TCS", "INFY"]
 

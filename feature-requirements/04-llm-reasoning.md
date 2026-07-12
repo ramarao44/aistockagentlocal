@@ -65,7 +65,7 @@
 ## Implementation Details
 
 ### Functions to Create/Modify
-- `src/reasoning/llm_reasoner.py` - LLM integration
+- `src/ai/llm_reasoner.py` - LLM integration
   - `run_model(model: str, prompt: str)` - Call Ollama via subprocess
   - `main_reasoning(prompt: str)` - Use qwen2.5:3b for main analysis
   - `fast_reasoning(prompt: str)` - Use llama3.2:3b for fast sentiment

@@ -41,7 +41,7 @@
 ## Implementation Details
 
 ### Functions to Create/Modify
-- `src/fetcher/market_fetcher.py` - Main market data fetcher
+- `src/ingestion/market_fetcher.py` - Main market data fetcher
   - `normalize_ticker(user_input: str)` - Convert to NSE/BSE format
   - `fetch_price_history(ticker: str, period: str, interval: str)` - Get OHLCV data
   - `fetch_indian_stock_data(user_input: str)` - Combined fetcher

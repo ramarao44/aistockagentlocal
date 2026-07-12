@@ -1,8 +1,8 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
-from src.fetcher.market_fetcher import fetch_indian_stock_data
+from src.ingestion.market_fetcher import fetch_indian_stock_data
 from src.database.crud import save_ai_report, get_trend_score_series
-from src.analysis.trend_evolution import analyze_trend_evolution
+from src.analysis.trend.trend_evolution import analyze_trend_evolution
 from src.ai.llm import generate_ai_report
 from src.alerts.alert_rules import evaluate_alerts
 from src.alerts.alert_engine import dispatch_alerts
@@ -31,7 +31,7 @@ def run_daily_ingestion():
 
         trend_score = data.get("trend_score")
         if trend_score is None:
-            from src.analysis.trend_score import compute_trend_score
+            from src.analysis.trend.trend_score import compute_trend_score
             trend_score = compute_trend_score({
                 "delivery_volume_pct": data.get("delivery_volume_pct"),
                 "delivery_trend_pct": data.get("delivery_trend_pct"),

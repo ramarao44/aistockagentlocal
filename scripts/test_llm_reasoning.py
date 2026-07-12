@@ -8,7 +8,7 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from src.reasoning import llm_reasoner
+from src.ai import llm_reasoner
 
 MOCK_MARKET_DATA = {
     "success": True,
@@ -23,10 +23,22 @@ MOCK_MARKET_DATA = {
     "last_updated": "2026-07-10",
 }
 
+MOCK_FUNDAMENTALS = {
+    "ticker": "RELIANCE.NS",
+    "period": "quarterly",
+    "valuation": {"pe_ratio": 25.5, "pbv_ratio": 3.2, "ev_ebitda": 18.5},
+    "growth": {"revenue_yoy": 12.1, "earnings_yoy": 10.4},
+    "profitability": {"roe": 14.2, "roa": 8.1, "roce": 12.0},
+    "risk": {"debt_to_equity": 0.3, "current_ratio": 1.8, "interest_coverage": 10.0},
+    "data_quality": {"coverage_pct": 88.0},
+}
+
 
 def test_local_standard_mode():
-    with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
-        "src.reasoning.llm_reasoner.main_reasoning",
+    with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
+        "src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS
+    ), patch(
+        "src.ai.llm_reasoner.main_reasoning",
         return_value=(
             "Summary:\nS1.\nS2.\n\n"
             "Indicators:\nS1.\nS2.\n\n"
@@ -44,8 +56,10 @@ def test_local_standard_mode():
 
 
 def test_optimized_mode_uses_main_model_once():
-    with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
-        "src.reasoning.llm_reasoner.main_reasoning",
+    with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
+        "src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS
+    ), patch(
+        "src.ai.llm_reasoner.main_reasoning",
         return_value=(
             "Summary:\nS1.\nS2.\n\n"
             "Indicators:\nS1.\nS2.\n\n"
@@ -63,10 +77,12 @@ def test_optimized_mode_uses_main_model_once():
 
 
 def test_local_failure_falls_back_to_cloud():
-    with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
-        "src.reasoning.llm_reasoner.main_reasoning", return_value="[Local LLM Error] model unavailable"
+    with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
+        "src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS
     ), patch(
-        "src.reasoning.llm_reasoner.run_cloud_llm",
+        "src.ai.llm_reasoner.main_reasoning", return_value="[Local LLM Error] model unavailable"
+    ), patch(
+        "src.ai.llm_reasoner.run_cloud_llm",
         return_value=(
             "Summary:\nS1.\nS2.\n\n"
             "Indicators:\nS1.\nS2.\n\n"
@@ -103,7 +119,9 @@ def test_score_total_bounds():
 
 
 def test_cloud_mode_missing_key_error():
-    with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch.dict(
+    with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), patch(
+        "src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS
+    ), patch.dict(
         "os.environ", {"OPENAI_API_KEY": ""}, clear=False
     ):
         # Temporarily remove OPENAI_API_KEY
@@ -193,7 +211,7 @@ def test_llm_error_response_format():
 
 def test_llm_timeout_handling():
     """Test that LLM timeouts are handled gracefully."""
-    with patch("src.reasoning.llm_reasoner.subprocess.run") as mock_run:
+    with patch("src.ai.llm_reasoner.subprocess.run") as mock_run:
         mock_run.side_effect = subprocess.TimeoutExpired(cmd="ollama", timeout=120)
         
         result = llm_reasoner.run_model("qwen2.5:3b", "test prompt")
@@ -203,7 +221,7 @@ def test_llm_timeout_handling():
 
 def test_llm_file_not_found_handling():
     """Test that missing ollama CLI is handled gracefully."""
-    with patch("src.reasoning.llm_reasoner.subprocess.run") as mock_run:
+    with patch("src.ai.llm_reasoner.subprocess.run") as mock_run:
         mock_run.side_effect = FileNotFoundError("ollama not found")
         
         result = llm_reasoner.run_model("qwen2.5:3b", "test prompt")
@@ -212,7 +230,7 @@ def test_llm_file_not_found_handling():
 
 def test_llm_subprocess_error_handling():
     """Test that subprocess errors are properly formatted."""
-    with patch("src.reasoning.llm_reasoner.subprocess.run") as mock_run:
+    with patch("src.ai.llm_reasoner.subprocess.run") as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(
             args=["ollama", "run", "qwen2.5:3b"],
             returncode=1,
@@ -227,7 +245,7 @@ def test_llm_subprocess_error_handling():
 
 def test_empty_output_handling():
     """Test that empty LLM output is handled gracefully."""
-    with patch("src.reasoning.llm_reasoner.subprocess.run") as mock_run:
+    with patch("src.ai.llm_reasoner.subprocess.run") as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(
             args=["ollama", "run", "qwen2.5:3b"],
             returncode=0,
@@ -241,7 +259,7 @@ def test_empty_output_handling():
 
 def test_subprocess_timeout_value():
     """Verify subprocess timeout is configured correctly (120 seconds)."""
-    with patch("src.reasoning.llm_reasoner.subprocess.run") as mock_run:
+    with patch("src.ai.llm_reasoner.subprocess.run") as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(
             args=["ollama", "run", "qwen2.5:3b"],
             returncode=0,
@@ -261,9 +279,10 @@ def test_subprocess_timeout_value():
 def test_report_generation_timing():
     """Test that report generation completes within reasonable time bounds."""
     start_time = time.time()
-    
-    with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), \
-         patch("src.reasoning.llm_reasoner.main_reasoning", return_value="Summary:\nS1.\nS2.\n\nIndicators:\nS1.\nS2.\n\nSentiment:\nS1.\nS2.\n\nRisks:\nS1.\nS2.\n\nOpportunities:\nS1.\nS2.\n\nRecommendation:\nS1.\nS2."):
+
+    with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=MOCK_MARKET_DATA), \
+         patch("src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=MOCK_FUNDAMENTALS), \
+         patch("src.ai.llm_reasoner.main_reasoning", return_value="Summary:\nS1.\nS2.\n\nIndicators:\nS1.\nS2.\n\nSentiment:\nS1.\nS2.\n\nRisks:\nS1.\nS2.\n\nOpportunities:\nS1.\nS2.\n\nRecommendation:\nS1.\nS2."):
         
         report = llm_reasoner.generate_llm_report("RELIANCE.NS", mode="local")
         elapsed = time.time() - start_time

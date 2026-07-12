@@ -7,7 +7,9 @@ import time
 import re
 from typing import Any, cast
 
-from src.fetcher.market_fetcher import fetch_indian_stock_data
+from src.ingestion.market_fetcher import fetch_indian_stock_data
+from src.analysis.fundamental import analyze_fundamentals
+from src.database.sqlite_legacy import load_latest_fundamental_data
 
 MAIN_MODEL = os.getenv("MAIN_LLM_MODEL", "qwen2.5:3b")
 FAST_MODEL = os.getenv("FAST_LLM_MODEL", "llama3.2:3b")
@@ -39,7 +41,43 @@ def _safe_get(data: dict, key: str, default: str = "N/A"):
     return value
 
 
-def _build_market_snapshot(data: dict) -> str:
+def _format_fundamental_context(fundamentals: dict | None) -> str:
+    if not fundamentals:
+        return "Fundamental Data: unavailable"
+
+    valuation = fundamentals.get("valuation", {})
+    growth = fundamentals.get("growth", {})
+    profitability = fundamentals.get("profitability", {})
+    risk = fundamentals.get("risk", {})
+    quality = fundamentals.get("data_quality", {})
+
+    return (
+        "Fundamental Data:\n"
+        f"- Period: {fundamentals.get('period', 'quarterly')}\n"
+        f"- P/E: {valuation.get('pe_ratio', 'N/A')} | PBV: {valuation.get('pbv_ratio', 'N/A')} | EV/EBITDA: {valuation.get('ev_ebitda', 'N/A')}\n"
+        f"- Revenue YoY: {growth.get('revenue_yoy', 'N/A')} | Earnings YoY: {growth.get('earnings_yoy', 'N/A')}\n"
+        f"- ROE: {profitability.get('roe', 'N/A')} | ROA: {profitability.get('roa', 'N/A')} | ROCE: {profitability.get('roce', 'N/A')}\n"
+        f"- Debt/Equity: {risk.get('debt_to_equity', 'N/A')} | Current Ratio: {risk.get('current_ratio', 'N/A')} | Interest Coverage: {risk.get('interest_coverage', 'N/A')}\n"
+        f"- Fundamental Coverage: {quality.get('coverage_pct', 'N/A')}"
+    )
+
+
+def _load_or_compute_fundamentals(ticker: str, period: str = "quarterly") -> dict | None:
+    try:
+        cached = load_latest_fundamental_data(ticker, period=period)
+        if cached:
+            return cached
+    except Exception:
+        pass
+
+    try:
+        return analyze_fundamentals(ticker, period=period, persist=True)
+    except Exception:
+        return None
+
+
+def _build_market_snapshot(data: dict, fundamentals: dict | None = None) -> str:
+    fundamental_context = _format_fundamental_context(fundamentals)
     return (
         f"Ticker: {_safe_get(data, 'ticker')}\n"
         f"Exchange: {_safe_get(data, 'exchange')}\n"
@@ -49,7 +87,8 @@ def _build_market_snapshot(data: dict) -> str:
         f"MA200: {_safe_get(data, 'ma200')}\n"
         f"Bollinger Upper: {_safe_get(data, 'bollinger_upper')}\n"
         f"Bollinger Lower: {_safe_get(data, 'bollinger_lower')}\n"
-        f"Last Updated: {_safe_get(data, 'last_updated')}"
+        f"Last Updated: {_safe_get(data, 'last_updated')}\n"
+        f"{fundamental_context}"
     )
 
 
@@ -484,7 +523,8 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
         print(f"[DEBUG] Market data fetch failed - {market_data.get('error', 'Unknown error')}")
         return f"Error fetching market data: {market_data.get('error', 'Unknown error')}"
 
-    market_snapshot = _build_market_snapshot(market_data)
+    fundamentals = _load_or_compute_fundamentals(market_data.get("ticker", ticker), period="quarterly")
+    market_snapshot = _build_market_snapshot(market_data, fundamentals=fundamentals)
     standardized_prompt = _build_standardized_report_prompt(market_snapshot)
 
     if mode_value == "cloud":
@@ -518,3 +558,79 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
         f"{report_body}\n\n"
         f"{score_block}"
     )
+
+
+def generate_ai_report(llm_input: dict) -> dict:
+    """Build a contract-friendly AI output from pipeline context."""
+    symbol = llm_input.get("symbol") or "UNKNOWN"
+    timeframe = llm_input.get("timeframe") or "daily"
+    technical = llm_input.get("technical") or {}
+    fundamental = llm_input.get("fundamental") or {}
+    sentiment = llm_input.get("sentiment") or {}
+    trend = llm_input.get("trend") or {}
+    weights = llm_input.get("weights") or {}
+
+    trend_score = trend.get("trend_score")
+    news_sentiment = sentiment.get("news_sentiment")
+    pe = ((fundamental.get("valuation") or {}).get("pe"))
+    rsi = technical.get("rsi")
+
+    sentiment_label = "neutral"
+    if isinstance(trend_score, (int, float)):
+        if trend_score >= 65:
+            sentiment_label = "bullish"
+        elif trend_score <= 40:
+            sentiment_label = "bearish"
+
+    summary_parts = [
+        f"{symbol} on {timeframe} timeframe shows {sentiment_label} trend context.",
+    ]
+
+    if isinstance(rsi, (int, float)):
+        summary_parts.append(f"RSI is {round(rsi, 2)}, indicating momentum-aware positioning.")
+    if isinstance(news_sentiment, (int, float)):
+        summary_parts.append(f"News sentiment score is {news_sentiment}.")
+    if isinstance(pe, (int, float)):
+        summary_parts.append(f"Valuation reference P/E is {round(pe, 2)}.")
+
+    risks = []
+    if isinstance(rsi, (int, float)) and rsi >= 70:
+        risks.append("Momentum is extended and may trigger short-term pullback risk.")
+    if isinstance(news_sentiment, (int, float)) and news_sentiment < 0:
+        risks.append("Recent news tone is negative and can pressure near-term price action.")
+    if isinstance(trend_score, (int, float)) and trend_score < 45:
+        risks.append("Trend score is weak, so signal confidence remains limited.")
+    if not risks:
+        risks.append("No major red flags detected from current contract inputs.")
+
+    opportunities = []
+    if isinstance(trend_score, (int, float)) and trend_score >= 60:
+        opportunities.append("Trend strength supports momentum-aligned opportunities.")
+    if isinstance(news_sentiment, (int, float)) and news_sentiment > 0:
+        opportunities.append("Positive headline flow can reinforce upside continuation.")
+    opportunities.append(
+        "Timeframe weighting favors "
+        f"technical={((weights.get('model_weights') or {}).get('technical'))}, "
+        f"fundamental={((weights.get('model_weights') or {}).get('fundamental'))}, "
+        f"sentiment={((weights.get('model_weights') or {}).get('sentiment'))}."
+    )
+
+    if sentiment_label == "bullish":
+        recommendation = "Accumulate in staggered entries while maintaining stop-loss discipline."
+        probability = 0.68
+    elif sentiment_label == "bearish":
+        recommendation = "Reduce fresh exposure and wait for technical confirmation before re-entry."
+        probability = 0.35
+    else:
+        recommendation = "Hold neutral stance and wait for stronger directional confirmation."
+        probability = 0.52
+
+    return {
+        "summary": " ".join(summary_parts),
+        "sentiment": sentiment_label,
+        "risks": risks,
+        "opportunities": opportunities,
+        "recommendation": recommendation,
+        "probability": probability,
+        "data_quality": "good",
+    }

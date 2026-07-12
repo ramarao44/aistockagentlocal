@@ -8,7 +8,7 @@ if ROOT not in sys.path:
 
 from src.database.engine import Base, engine
 from src.database.crud import save_ai_report
-from src.reasoning.llm_reasoner import generate_llm_report
+from src.ai.llm_reasoner import generate_llm_report
 
 Base.metadata.create_all(bind=engine)
 
@@ -36,8 +36,20 @@ market_data = {
     "last_updated": "2026-07-10",
 }
 
-with patch("src.reasoning.llm_reasoner.fetch_indian_stock_data", return_value=market_data), patch(
-    "src.reasoning.llm_reasoner.main_reasoning",
+mock_fundamentals = {
+    "ticker": "RELIANCE.NS",
+    "period": "quarterly",
+    "valuation": {"pe_ratio": 25.5, "pbv_ratio": 3.2, "ev_ebitda": 18.5},
+    "growth": {"revenue_yoy": 12.1, "earnings_yoy": 10.4},
+    "profitability": {"roe": 14.2, "roa": 8.1, "roce": 12.0},
+    "risk": {"debt_to_equity": 0.3, "current_ratio": 1.8, "interest_coverage": 10.0},
+    "data_quality": {"coverage_pct": 88.0},
+}
+
+with patch("src.ai.llm_reasoner.fetch_indian_stock_data", return_value=market_data), patch(
+    "src.ai.llm_reasoner._load_or_compute_fundamentals", return_value=mock_fundamentals
+), patch(
+    "src.ai.llm_reasoner.main_reasoning",
     return_value=(
         "Summary:\nS1.\nS2.\n\n"
         "Indicators:\nS1.\nS2.\n\n"

@@ -594,7 +594,7 @@ python -m scripts.test_supertrend
 python -m scripts.test_vwap
 
 # Run UI
-chainlit run app.py
+chainlit run main.py
 
 # Run server
 python local_server.py

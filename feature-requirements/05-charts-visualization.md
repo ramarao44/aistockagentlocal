@@ -83,8 +83,8 @@ src/
 - Return format: PIL Image or file path
 
 ### Data Flow
-1. Fetch data from `src/fetcher/market_fetcher.py`
-2. Process with `src/analysis/trend_score.py`
+1. Fetch data from `src/ingestion/market_fetcher.py`
+2. Process with `src/analysis/trend/trend_score.py`
 3. Generate chart with matplotlib/plotly
 4. Display in Chainlit UI
 5. Save to `data/charts/` for caching

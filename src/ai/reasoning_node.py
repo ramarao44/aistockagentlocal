@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import pandas as pd
 
-from src.db.database import (
+from src.database.sqlite_legacy import (
     load_market_data,
     load_indicators,
     load_news,

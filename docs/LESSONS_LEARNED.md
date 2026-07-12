@@ -185,7 +185,7 @@ That document contains:
 ### 00. Deterministic Report Contracts Need Guardrails (2026-07-11)
 **Problem:** Small local models can violate strict output contracts (fixed sections/sentences) even with strong prompts.
 
-**Solution:** Added a layered enforcement strategy in `src/reasoning/llm_reasoner.py`:
+**Solution:** Added a layered enforcement strategy in `src/ai/llm_reasoner.py`:
 - Primary generation with strict template prompt
 - Automatic repair retry when format is invalid
 - Deterministic fallback report if repair still fails

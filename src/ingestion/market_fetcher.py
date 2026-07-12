@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 
 from src.database.crud import save_daily_record
-from src.db.database import load_symbol_resolution_cache, save_symbol_resolution_cache
+from src.database.sqlite_legacy import load_symbol_resolution_cache, save_symbol_resolution_cache
 
 # Optional: cloudscraper for NSE data (bypasses Cloudflare)
 try:
@@ -923,7 +923,7 @@ def fetch_indian_stock_data(user_input: str):
                 delivery_trend_pct = round((delivery_pct - (recent_volumes.mean() / total_volume * 100)), 2)
 
         # Trend Score 2.0
-        from src.analysis.trend_score import compute_trend_score
+        from src.analysis.trend.trend_score import compute_trend_score
 
         trend_score = compute_trend_score({
             "delivery_volume_pct": delivery_pct,

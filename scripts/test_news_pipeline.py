@@ -7,9 +7,9 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from src.fetcher.news_fetcher import fetch_news
-from src.analyzer.sentiment_analyzer import compute_sentiment
-from src.db.database import save_news, save_sentiment, load_news, load_sentiment
+from src.ingestion.news_fetcher import fetch_news
+from src.analysis.sentiment.sentiment_analyzer import compute_sentiment
+from src.database.sqlite_legacy import save_news, save_sentiment, load_news, load_sentiment
 
 
 def ensure_db_schema():

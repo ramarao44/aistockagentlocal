@@ -8,7 +8,7 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from src.fetcher.market_fetcher import fetch_indian_stock_data
+from src.ingestion.market_fetcher import fetch_indian_stock_data
 
 
 def _build_price_df(rows: int = 260):
@@ -41,14 +41,14 @@ def _mock_yf_download(*args, **kwargs):
 def test_cache_hit_uses_cached_symbol_without_rewrite():
     cached = {"nse": "HCLTECH.NS", "bse": "HCLTECH.BO", "source": "web"}
 
-    with patch("src.fetcher.market_fetcher.load_symbol_resolution_cache", return_value=cached), patch(
-        "src.fetcher.market_fetcher.resolve_symbol_from_web", return_value=None
-    ), patch("src.fetcher.market_fetcher.fetch_price_history", return_value=_build_price_df(rows=260)) as fetch_mock, patch(
-        "src.fetcher.market_fetcher.save_symbol_resolution_cache"
-    ) as save_cache_mock, patch("src.fetcher.market_fetcher.yf.download", side_effect=_mock_yf_download), patch(
-        "src.fetcher.market_fetcher.fetch_moneycontrol_delivery",
+    with patch("src.ingestion.market_fetcher.load_symbol_resolution_cache", return_value=cached), patch(
+        "src.ingestion.market_fetcher.resolve_symbol_from_web", return_value=None
+    ), patch("src.ingestion.market_fetcher.fetch_price_history", return_value=_build_price_df(rows=260)) as fetch_mock, patch(
+        "src.ingestion.market_fetcher.save_symbol_resolution_cache"
+    ) as save_cache_mock, patch("src.ingestion.market_fetcher.yf.download", side_effect=_mock_yf_download), patch(
+        "src.ingestion.market_fetcher.fetch_moneycontrol_delivery",
         return_value={"success": True, "delivery_pct": 45.0, "delivery_qty": 450000, "total_volume": 1000000},
-    ), patch("src.fetcher.market_fetcher.save_daily_record"):
+    ), patch("src.ingestion.market_fetcher.save_daily_record"):
         result = fetch_indian_stock_data("HCL Technologies")
 
         assert result["success"] is True
@@ -67,14 +67,14 @@ def test_web_resolution_is_used_and_persisted_when_direct_fails():
             return None
         return _build_price_df(rows=260)
 
-    with patch("src.fetcher.market_fetcher.load_symbol_resolution_cache", return_value=None), patch(
-        "src.fetcher.market_fetcher.resolve_symbol_from_web", return_value=web_tickers
-    ), patch("src.fetcher.market_fetcher.fetch_price_history", side_effect=fetch_side_effect), patch(
-        "src.fetcher.market_fetcher.save_symbol_resolution_cache"
-    ) as save_cache_mock, patch("src.fetcher.market_fetcher.yf.download", side_effect=_mock_yf_download), patch(
-        "src.fetcher.market_fetcher.fetch_moneycontrol_delivery",
+    with patch("src.ingestion.market_fetcher.load_symbol_resolution_cache", return_value=None), patch(
+        "src.ingestion.market_fetcher.resolve_symbol_from_web", return_value=web_tickers
+    ), patch("src.ingestion.market_fetcher.fetch_price_history", side_effect=fetch_side_effect), patch(
+        "src.ingestion.market_fetcher.save_symbol_resolution_cache"
+    ) as save_cache_mock, patch("src.ingestion.market_fetcher.yf.download", side_effect=_mock_yf_download), patch(
+        "src.ingestion.market_fetcher.fetch_moneycontrol_delivery",
         return_value={"success": True, "delivery_pct": 40.0, "delivery_qty": 400000, "total_volume": 1000000},
-    ), patch("src.fetcher.market_fetcher.save_daily_record"):
+    ), patch("src.ingestion.market_fetcher.save_daily_record"):
         result = fetch_indian_stock_data(query)
 
         assert result["success"] is True
@@ -88,9 +88,9 @@ def test_web_resolution_is_used_and_persisted_when_direct_fails():
 
 
 def test_returns_error_when_all_resolution_paths_fail():
-    with patch("src.fetcher.market_fetcher.load_symbol_resolution_cache", return_value=None), patch(
-        "src.fetcher.market_fetcher.resolve_symbol_from_web", return_value=None
-    ), patch("src.fetcher.market_fetcher.fetch_price_history", return_value=None):
+    with patch("src.ingestion.market_fetcher.load_symbol_resolution_cache", return_value=None), patch(
+        "src.ingestion.market_fetcher.resolve_symbol_from_web", return_value=None
+    ), patch("src.ingestion.market_fetcher.fetch_price_history", return_value=None):
         result = fetch_indian_stock_data("UNKNOWN COMPANY")
 
         assert result["success"] is False
