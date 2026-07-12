@@ -84,3 +84,18 @@ A release is documentation-valid only when all gates pass with zero critical fai
 - Verify non-trivial implementation tasks reference approved CR id.
 - Verify CR status is `approved` before implementation starts.
 - Verify AI handoff references active baseline id and impact analysis evidence.
+
+## Gate 14: Clean Scope Governance Protection
+- Verify clean build operations target only disposable generated output paths.
+- Verify clean build never deletes or mutates governance/canonical paths:
+  - `docs/**`
+  - `docs/baseline/**`
+  - `docs/change-requests/**`
+  - `gen/docs/**`
+  - `reports/**`
+
+## Gate 15: Enforcement Parity (Policy vs Execution)
+- Verify release/push paths execute CR impact gate before tests/docs packaging.
+- Verify ci/release build commands require `--cr-id` for non-trivial changes.
+- Verify pre-push hook enforces gated build (CR impact + tests) and blocks on failure.
+- Verify checklist commands match enforced hook/build behavior.

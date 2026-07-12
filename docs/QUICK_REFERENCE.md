@@ -43,7 +43,20 @@ build-profiles\cr-impact-check.bat CR-YYYYMMDD-XXX
 python scripts/build.py --profile baseline-sync
 python scripts/build.py --profile cr-prepare --cr-id CR-20260713-001 --cr-title "example"
 python scripts/build.py --profile cr-impact-check --cr-id CR-20260713-001
+python scripts/build.py --profile ci --cr-id CR-20260713-001
+
+# Clean-only (safe)
+python scripts/build.py --profile quick --clean on --docs off --tests off --debug off
+
+# Pre-push hook CR id (required for gated push)
+$env:AISA_CR_ID="CR-20260713-001"
+git push
 ```
+
+### Clean Scope Guardrails
+
+- Clean includes only: `build/docs/**`, `gen/debug/**`, `gen/llm/**`, `gen/pipeline-runs/**`, `gen/reports/**`, `gen/tmp/**`.
+- Clean must never touch: `docs/**`, `docs/baseline/**`, `docs/change-requests/**`, `gen/docs/**`, `reports/**`.
 
 ---
 

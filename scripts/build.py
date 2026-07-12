@@ -42,6 +42,8 @@ PROFILE_MAP = {
     "cr-impact-check": {"debug": "off", "tests": "off", "docs": "off", "clean": "off"},
 }
 
+STRICT_RELEASE_PROFILES = {"ci", "release"}
+
 ON_OFF = {"on", "off"}
 
 GEN_RUNTIME_SUBDIRS = [
@@ -50,6 +52,14 @@ GEN_RUNTIME_SUBDIRS = [
     REPO_ROOT / "gen" / "pipeline-runs",
     REPO_ROOT / "gen" / "reports",
     REPO_ROOT / "gen" / "tmp",
+]
+
+CLEAN_PROTECTED_PATHS = [
+    REPO_ROOT / "docs",
+    BASELINE_ROOT,
+    CR_ROOT,
+    REPO_ROOT / "gen" / "docs",
+    REPO_ROOT / "reports",
 ]
 
 REPORT_OUTPUTS = [
@@ -115,6 +125,36 @@ def _clean_directory_contents(path: Path) -> None:
             shutil.rmtree(item)
         else:
             item.unlink()
+
+
+def _paths_overlap(path_a: Path, path_b: Path) -> bool:
+    a = path_a.resolve()
+    b = path_b.resolve()
+
+    try:
+        a.relative_to(b)
+        return True
+    except ValueError:
+        pass
+
+    try:
+        b.relative_to(a)
+        return True
+    except ValueError:
+        return False
+
+
+def _validate_clean_targets(targets: list[Path]) -> None:
+    for target in targets:
+        if not _is_repo_relative_safe(target):
+            raise BuildError(f"Refusing to clean path outside repository: {target}")
+
+        for protected in CLEAN_PROTECTED_PATHS:
+            if _paths_overlap(target, protected):
+                raise BuildError(
+                    "Clean policy violation: target overlaps protected governance/canonical path "
+                    f"({target} overlaps {protected})"
+                )
 
 
 def _sha256_file(path: Path) -> str:
@@ -547,9 +587,18 @@ def main(argv: list[str] | None = None) -> int:
             summary["status"] = "ok"
             return 0
 
+        if profile in STRICT_RELEASE_PROFILES:
+            if not args.cr_id:
+                raise BuildError("--cr-id is required for profile ci/release")
+            gate_info = _check_cr_impact_gate(args.cr_id)
+            summary["actions"].append("cr-impact-check")
+            summary["artifacts"] = {"cr_gate": gate_info}
+
         _preflight(toggles)
 
         if _bool_from_on_off(toggles["clean"]):
+            clean_targets = [*GEN_RUNTIME_SUBDIRS, BUILD_DOCS_DIR]
+            _validate_clean_targets(clean_targets)
             for path in GEN_RUNTIME_SUBDIRS:
                 _clean_directory_contents(path)
             _clean_directory_contents(BUILD_DOCS_DIR)
