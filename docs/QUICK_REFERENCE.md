@@ -186,3 +186,28 @@ if isinstance(df.columns, pd.MultiIndex):
 `reports/TEST_REPORT.md`
 
 This file should be overwritten with the latest run results each time tests are executed.
+
+---
+
+## 📊 Requirement Outcome Reporting
+
+Primary artifacts:
+- `reports/requirement_status_latest.csv`
+- `reports/failing_requirements_latest.csv`
+- `reports/test_case_results_latest.csv`
+- `reports/TEST_REPORT.md`
+
+Outcome semantics in `requirement_status_latest.csv`:
+- `Passed`: At least one mapped test ran and all mapped tests passed.
+- `Failed`: One or more mapped tests failed.
+- `Not Covered`: No mapped tests were executed for the requirement in the run.
+- `Partial`: Mixed pass/fail/skip behavior where full pass criteria is not met.
+
+Transition fields for one-cycle ID migration:
+- `requirement_id`: Canonical ID (FR-01 style).
+- `legacy_requirement_ids_text`: Legacy IDs mapped to the canonical requirement.
+- `canonical_requirement_ids_text` in `test_case_results_latest.csv`: Canonical IDs resolved from legacy mappings.
+
+Note:
+- Legacy IDs remain supported during the transition cycle for historical comparability.
+- New reports should be consumed using canonical `requirement_id` and `outcome`.

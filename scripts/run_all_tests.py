@@ -26,11 +26,39 @@ def load_traceability() -> dict:
     if not os.path.exists(TRACEABILITY_PATH):
         return {
             "requirements": [],
+            "canonical_requirements": [],
             "test_case_map": {},
             "test_module_map": {},
+            "legacy_to_canonical": {},
+            "deprecated_legacy_requirement_ids": [],
         }
     with open(TRACEABILITY_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def canonicalize_requirement_ids(requirement_ids: list[str], traceability: dict) -> list[str]:
+    legacy_to_canonical = traceability.get("legacy_to_canonical", {})
+    deprecated_legacy = set(traceability.get("deprecated_legacy_requirement_ids", []))
+    canonical_catalog = {
+        req.get("requirement_id")
+        for req in traceability.get("canonical_requirements", [])
+        if req.get("requirement_id")
+    }
+
+    canonical_ids = []
+    for req_id in requirement_ids:
+        mapped = legacy_to_canonical.get(req_id)
+        if mapped:
+            canonical_ids.append(mapped)
+            continue
+        if req_id in canonical_catalog:
+            canonical_ids.append(req_id)
+            continue
+        if req_id in deprecated_legacy:
+            continue
+        canonical_ids.append(req_id)
+
+    return sorted(set(canonical_ids))
 
 
 def map_requirements(test_case_id: str, module_name: str, traceability: dict) -> list[str]:
@@ -206,14 +234,22 @@ def build_requirement_rows(
     run_id: str,
     timestamp: str,
 ) -> tuple[list[dict], list[dict]]:
-    requirements = traceability.get("requirements", [])
+    requirements = traceability.get("canonical_requirements") or traceability.get("requirements", [])
     test_case_map = traceability.get("test_case_map", {})
     module_map = traceability.get("test_module_map", {})
+    legacy_to_canonical = traceability.get("legacy_to_canonical", {})
+
+    reverse_aliases = {}
+    for legacy_id, canonical_id in legacy_to_canonical.items():
+        if not canonical_id:
+            continue
+        reverse_aliases.setdefault(canonical_id, set()).add(legacy_id)
 
     failing_by_req = {}
     by_req = {}
     for req in requirements:
         req_id = req.get("requirement_id")
+        legacy_ids = sorted(set(req.get("legacy_ids", []) + list(reverse_aliases.get(req_id, set()))))
         by_req[req_id] = {
             "run_id": run_id,
             "updated_at": timestamp,
@@ -221,18 +257,21 @@ def build_requirement_rows(
             "feature": req.get("feature", ""),
             "requirement_title": req.get("title", ""),
             "status": req.get("status", "Pending Input"),
+            "outcome": "Not Covered",
             "evidence_quality": req.get("evidence_quality", "pending"),
             "owner": req.get("owner", "Pending Input"),
             "mapped_test_count": 0,
             "passing_test_count": 0,
+            "failing_test_count": 0,
+            "legacy_requirement_ids_text": ";".join(legacy_ids),
         }
 
     for row in rows:
-        mapped = row.get("requirement_ids", [])
+        mapped = row.get("canonical_requirement_ids", [])
         if not mapped:
-            mapped = test_case_map.get(row["test_case_id"], [])
+            mapped = canonicalize_requirement_ids(test_case_map.get(row["test_case_id"], []), traceability)
         if not mapped:
-            mapped = module_map.get(row["module"], [])
+            mapped = canonicalize_requirement_ids(module_map.get(row["module"], []), traceability)
 
         for req_id in mapped:
             if req_id not in by_req:
@@ -241,10 +280,21 @@ def build_requirement_rows(
             if row["result"] == "passed":
                 by_req[req_id]["passing_test_count"] += 1
             if row["result"] == "failed":
+                by_req[req_id]["failing_test_count"] += 1
                 failing_by_req.setdefault(req_id, []).append(row["test_case_id"])
 
     for req_id, failing_tests in failing_by_req.items():
         by_req[req_id]["status"] = "Not Working"
+
+    for req_id, row in by_req.items():
+        if row["mapped_test_count"] == 0:
+            row["outcome"] = "Not Covered"
+        elif req_id in failing_by_req:
+            row["outcome"] = "Failed"
+        elif row["passing_test_count"] == row["mapped_test_count"]:
+            row["outcome"] = "Passed"
+        else:
+            row["outcome"] = "Partial"
 
     failing_rows = []
     for req_id, failing_tests in sorted(failing_by_req.items()):
@@ -252,6 +302,7 @@ def build_requirement_rows(
             {
                 "run_id": run_id,
                 "requirement_id": req_id,
+                "legacy_requirement_ids_text": by_req[req_id].get("legacy_requirement_ids_text", ""),
                 "failing_test_case_ids": ";".join(sorted(set(failing_tests))),
                 "status_impact": "Not Working",
             }
@@ -265,6 +316,7 @@ def write_markdown_summary(
     executed: list[str],
     rows: list[dict],
     failing_requirements: list[dict],
+    requirement_rows: list[dict],
     gate_verdict: str,
 ) -> None:
     passed = sum(1 for r in rows if r["result"] == "passed")
@@ -309,6 +361,35 @@ def write_markdown_summary(
                 f"- {req['requirement_id']} (tests: {req['failing_test_case_ids']})"
             )
 
+    outcome_counts = {}
+    for row in requirement_rows:
+        outcome = row.get("outcome", "Unknown")
+        outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+
+    lines.extend(["", "## Requirement Outcomes"])
+    lines.append(f"- Passed: {outcome_counts.get('Passed', 0)}")
+    lines.append(f"- Failed: {outcome_counts.get('Failed', 0)}")
+    lines.append(f"- Not Covered: {outcome_counts.get('Not Covered', 0)}")
+    if outcome_counts.get("Partial", 0):
+        lines.append(f"- Partial: {outcome_counts.get('Partial', 0)}")
+
+    failed_requirements = [r for r in requirement_rows if r.get("outcome") == "Failed"]
+    not_covered_requirements = [r for r in requirement_rows if r.get("outcome") == "Not Covered"]
+
+    lines.extend(["", "## Failed Requirement IDs"])
+    if not failed_requirements:
+        lines.append("- None")
+    else:
+        for req in failed_requirements:
+            lines.append(f"- {req['requirement_id']} (failing tests: {req['failing_test_count']})")
+
+    lines.extend(["", "## Not Covered Requirement IDs"])
+    if not not_covered_requirements:
+        lines.append("- None")
+    else:
+        for req in not_covered_requirements:
+            lines.append(f"- {req['requirement_id']}")
+
     out_path = os.path.join(REPORTS_DIR, "TEST_REPORT.md")
     os.makedirs(REPORTS_DIR, exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
@@ -352,7 +433,9 @@ def main() -> int:
 
     for row in rows:
         row["requirement_ids"] = sorted(set(row.get("requirement_ids", [])))
+        row["canonical_requirement_ids"] = canonicalize_requirement_ids(row["requirement_ids"], traceability)
         row["requirement_ids_text"] = ";".join(row["requirement_ids"])
+        row["canonical_requirement_ids_text"] = ";".join(row["canonical_requirement_ids"])
 
     failed = sum(1 for r in rows if r["result"] == "failed")
     gate_verdict = "PASS" if failed == 0 else "FAIL"
@@ -385,6 +468,7 @@ def main() -> int:
             "result",
             "duration_ms",
             "requirement_ids_text",
+            "canonical_requirement_ids_text",
             "message",
         ],
     )
@@ -392,7 +476,7 @@ def main() -> int:
     write_csv(
         os.path.join(REPORTS_DIR, "failing_requirements_latest.csv"),
         failing_requirement_rows,
-        ["run_id", "requirement_id", "failing_test_case_ids", "status_impact"],
+        ["run_id", "requirement_id", "legacy_requirement_ids_text", "failing_test_case_ids", "status_impact"],
     )
 
     write_csv(
@@ -405,14 +489,24 @@ def main() -> int:
             "feature",
             "requirement_title",
             "status",
+            "outcome",
             "evidence_quality",
             "owner",
             "mapped_test_count",
             "passing_test_count",
+            "failing_test_count",
+            "legacy_requirement_ids_text",
         ],
     )
 
-    write_markdown_summary(timestamp, executed_commands, rows, failing_requirement_rows, gate_verdict)
+    write_markdown_summary(
+        timestamp,
+        executed_commands,
+        rows,
+        failing_requirement_rows,
+        requirement_rows,
+        gate_verdict,
+    )
 
     print("RUN_ID", run_id)
     print("TOTAL", len(rows), "FAILED", failed, "GATE", gate_verdict)

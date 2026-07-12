@@ -1,6 +1,6 @@
 # AI Stock Agent - Design & Development Document
 **Version:** 1.0
-**Last Updated:** 2026-07-11
+**Last Updated:** 2026-07-13
 **Status:** Living Document
 
 ---
@@ -20,6 +20,7 @@
 ---
 
 ## 📝 Change Log
+- **2026-07-13:** Implemented requirement outcome reporting in `scripts/run_all_tests.py` with canonical FR-ID transition (`FR-01-*`), alias compatibility fields, and explicit `Passed/Failed/Not Covered` outputs in test artifacts - improves auditability and requirement-level governance evidence.
 - **2026-07-13:** Added baseline-driven change governance workflow with dedicated baseline snapshots (`docs/baseline`) and CR workspaces (`docs/change-requests`) plus mandatory impact-analysis gate before implementation - improves AI change safety and traceability.
 - **2026-07-11:** Standardized LLM output to a fixed 6-section evaluation format with strict validation, retry, and deterministic fallback in `src/ai/llm_reasoner.py` - ensures machine-parsable, deterministic report structure for cross-model comparison.
 - **2026-07-11:** Added deterministic section scoring (`0-5` each, total `0-30`) appended as `SectionScore` lines in report output - enables quantifiable model evaluation and easy downstream parsing.

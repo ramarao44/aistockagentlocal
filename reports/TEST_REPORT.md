@@ -1,4 +1,4 @@
-# Test Report - 2026-07-12T12:18:02+00:00
+# Test Report - 2026-07-12T22:58:15+00:00
 
 ## Run Scope
 - Designated run type: pre-push mandatory suite
@@ -37,3 +37,15 @@
 
 ## Failing Requirements
 - None
+
+## Requirement Outcomes
+- Passed: 24
+- Failed: 0
+- Not Covered: 2
+
+## Failed Requirement IDs
+- None
+
+## Not Covered Requirement IDs
+- FR-06-002
+- FR-06-003

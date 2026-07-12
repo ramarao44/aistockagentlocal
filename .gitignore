@@ -24,6 +24,9 @@ venv/
 logs/
 *.log
 gen/
+!gen/
+!gen/docs/
+!gen/docs/requirement_test_traceability.json
 build/
 
 # OS files
