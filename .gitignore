@@ -23,6 +23,11 @@ venv/
 # Logs
 logs/
 *.log
+gen/
+!gen/
+!gen/docs/
+!gen/docs/requirement_test_traceability.json
+build/
 
 # OS files
 .DS_Store

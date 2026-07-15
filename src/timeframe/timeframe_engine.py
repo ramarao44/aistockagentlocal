@@ -1,5 +1,6 @@
 """Timeframe engine for indicator selection and model weighting."""
 
+from src.core.debug import dbg
 from src.timeframe.indicator_map import get_indicator_set
 from src.timeframe.model_weights import get_model_weights
 
@@ -8,7 +9,9 @@ def build_timeframe_config(
     timeframe: str | None,
     analysis_types: list[str] | None,
     risk_profile: str | None,
+    master: dict | None = None,
 ) -> dict:
+    dbg(master, "TIMEFRAME.ENGINE", "BUILD", "OK", "Building timeframe config")
     selected = (timeframe or "daily").strip().lower()
     enabled = set([x.strip().lower() for x in (analysis_types or []) if x])
 
@@ -25,12 +28,14 @@ def build_timeframe_config(
         if total > 0:
             weights = {k: round(v / total, 4) for k, v in weights.items()}
 
-    return {
+    result = {
         "selected": selected,
         "indicator_set": get_indicator_set(selected),
         "fundamental_horizon": "quarterly" if selected in {"intraday", "daily", "weekly"} else "annual",
         "model_weights": weights,
     }
+    dbg(master, "TIMEFRAME.ENGINE", "BUILD", "OK", "Timeframe config built")
+    return result
 
 
 def evaluate_timeframe(payload: dict) -> dict:

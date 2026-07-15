@@ -1,7 +1,7 @@
 # AI Assistant Instructions for AI Stock Agent Project
 
-**Version:** 1.2
-**Last Updated:** 2026-07-08
+**Version:** 1.3
+**Last Updated:** 2026-07-13
 **Purpose:** Guidelines for AI models working on this project + interactive learning framework for AI product leadership
 
 ---
@@ -23,6 +23,69 @@
 5. **Never** skip the 10-point pre-push validation
 
 **This is not optional. It protects the repo.**
+
+---
+
+## 📐 BASELINE + CHANGE REQUEST GOVERNANCE (MANDATORY)
+
+For non-trivial changes, AI must follow baseline-driven workflow before implementation:
+
+1. Use active baseline from `docs/baseline/active_baseline.json`.
+2. Work inside a CR folder under `docs/change-requests/CR-YYYYMMDD-XXX`.
+3. Treat `baseline-copy` as immutable.
+4. Apply changes only in `proposed`.
+5. Complete impact analysis with required sections:
+  - Changed Documents
+  - Code Impact
+  - Test Impact
+  - Risks and Rollback
+  - Consistency Updates
+6. Implementation may start only when CR status is `approved`.
+7. All implementation prompts must include CR id and baseline id.
+8. Clean build commands must never delete governance assets or canonical docs.
+
+### Non-Trivial Change Classification (Required)
+
+A change is non-trivial if any of the following is true:
+- Modifies behavior in `src/**`, `scripts/**`, `tests/**`, scheduler, database, API, or UI flows.
+- Changes requirement intent, acceptance criteria, or user-facing outputs.
+- Changes data contracts, schema, dependencies, reliability/performance/security behavior.
+- Requires updates in more than one surface (code + tests, code + docs, or docs + gates).
+
+If any condition matches, CR workflow and approval are mandatory.
+
+### Mandatory End-to-End Impact Matrix
+
+For each non-trivial CR, `supporting/IMPACT_ANALYSIS.md` must explicitly include:
+- Changed code modules and symbols.
+- Impacted tests and exact commands to run.
+- Required documentation updates (design, quick reference, feature requirement docs, governance docs).
+- Rollback and risk controls for deployment/readiness.
+
+### Never-Clean Governance Rule (Hard)
+
+When running build with `clean=on`, only disposable generated runtime outputs may be removed.
+
+Protected paths that must never be cleaned:
+- `docs/**`
+- `docs/baseline/**`
+- `docs/change-requests/**`
+- `gen/docs/**`
+- `reports/**`
+
+Safe clean-only command:
+
+```powershell
+python scripts/build.py --profile quick --clean on --docs off --tests off --debug off
+```
+
+Validation helper commands:
+
+```powershell
+python scripts/build.py --profile baseline-sync
+python scripts/build.py --profile cr-prepare --cr-id CR-20260713-001 --cr-title "example"
+python scripts/build.py --profile cr-impact-check --cr-id CR-20260713-001
+```
 
 ---
 

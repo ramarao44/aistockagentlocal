@@ -1,5 +1,6 @@
 yfinance
 pandas
+ta
 pandas-ta
 beautifulsoup4
 firecrawl

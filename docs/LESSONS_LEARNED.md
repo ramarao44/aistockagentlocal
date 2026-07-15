@@ -1,7 +1,7 @@
 # Lessons Learned - AI Stock Agent Project
 
 **Version:** 2.0
-**Last Updated:** 2026-07-11
+**Last Updated:** 2026-07-13
 **Purpose:** Document technical challenges, solutions, AND product leadership lessons from Phase 2 audit for interview preparation
 
 ---
@@ -19,6 +19,26 @@
 ---
 
 ## 🏆 Product Leadership Lessons
+
+### Lesson #0: Requirement Status Must Be Derived, Not Declared
+**From:** Requirement traceability reporting hardening (2026-07-13)
+**Situation:** Requirement status could appear healthy even when no tests mapped to that requirement.
+
+**Key Learning:**
+- Static status labels alone can mislead governance reviews.
+- Requirement outcomes should be derived from executed tests per run.
+- Explicit `Not Covered` outcome is necessary to avoid false confidence.
+- Legacy-to-canonical ID migrations need transition aliases to preserve audit continuity.
+
+**For PM Roles:**
+- Ask for requirement-level evidence, not only global PASS/FAIL.
+- Treat coverage gaps as delivery risk, even when all tests pass.
+- Plan migrations with compatibility windows to avoid reporting discontinuities.
+
+**Interview Talking Point:**
+> "I converted requirement reporting from declared status to evidence-derived outcomes. Even with all tests passing, uncovered requirements became visible as `Not Covered`, which improved roadmap honesty and audit quality."
+
+---
 
 **These lessons come from Phase 2 Audit experience. See** [AI_PM_INTERVIEW_PREP.md](./AI_PM_INTERVIEW_PREP.md) **for complete context and STAR stories.**
 

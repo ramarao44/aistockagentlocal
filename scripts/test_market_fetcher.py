@@ -62,7 +62,7 @@ def test_web_resolution_is_used_and_persisted_when_direct_fails():
     web_tickers = {"nse": "HCLTECH.NS", "bse": "HCLTECH.BO"}
     query = "HCL Tech Company"
 
-    def fetch_side_effect(ticker, period="1y", interval="1d"):
+    def fetch_side_effect(ticker, period="1y", interval="1d", **kwargs):
         if ticker.startswith("HCL TECH COMPANY"):
             return None
         return _build_price_df(rows=260)

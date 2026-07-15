@@ -29,6 +29,22 @@ while IFS= read -r file; do
     fi
 done < <(git diff --cached --name-only)
 
+# Check 4: Non-trivial changes must pass CR impact gate + tests via ci profile
+CR_ID="${AISA_CR_ID:-$CR_ID}"
+if [ -z "$CR_ID" ]; then
+    echo "❌ FAIL: Missing CR id for gated validation"
+    echo "Set AISA_CR_ID or CR_ID before push (example: export AISA_CR_ID=CR-20260713-001)"
+    exit 1
+fi
+
+echo ""
+echo "Running gated validation: python scripts/build.py --profile ci --cr-id $CR_ID"
+python scripts/build.py --profile ci --cr-id "$CR_ID"
+if [ $? -ne 0 ]; then
+    echo "❌ FAIL: Gated validation failed for CR $CR_ID"
+    exit 1
+fi
+
 echo ""
 echo "✅ Pre-push checks passed!"
 exit 0

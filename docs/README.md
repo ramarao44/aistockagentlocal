@@ -11,6 +11,12 @@ This folder contains project design, audit, roadmap, and testing documentation.
 - `AI_INSTRUCTIONS.md` - contributor/agent operating rules
 - `PRODUCT_ROADMAP.md` - phase-wise delivery plan
 
+## User Manuals
+
+- `user-manuals/developer-manual.md` - governance-first development workflow, build profiles, and required docs updates
+- `user-manuals/tester-manual.md` - test execution sequence, gated validation, and evidence checks
+- `user-manuals/end-user-manual.md` - run and usage guide for local app/server/report workflows
+
 ## LLM Reasoning Notes
 
 Current reasoning implementation is in `src/ai/llm_reasoner.py`.

@@ -7,9 +7,14 @@
 ## 1️⃣ RUN ALL TESTS (Non-Negotiable)
 
 ```bash
-python -m scripts.test_mvp
-python -m scripts.test_db  
-python -m scripts.test_llm_reasoning
+# Required for non-trivial changes: CR gate first
+python scripts/build.py --profile cr-impact-check --cr-id CR-YYYYMMDD-XXX
+
+# Required gated build (includes tests + docs packaging)
+python scripts/build.py --profile ci --cr-id CR-YYYYMMDD-XXX
+
+# Or profile launcher on Windows
+build-profiles\ci.bat
 ```
 
 ### ❌ STOP IF ANY TEST FAILS
@@ -29,6 +34,7 @@ python -m scripts.test_llm_reasoning
   ```
 - [ ] **docs/LESSONS_LEARNED.md** - Add if new patterns discovered
 - [ ] **docs/QUICK_REFERENCE.md** - Update if commands changed
+- [ ] **feature-requirements/** - Update impacted requirement/acceptance criteria file when behavior changes
 
 ---
 
@@ -44,6 +50,7 @@ python -m scripts.test_llm_reasoning
 - [ ] Error handling added for external dependencies (APIs, databases)
 - [ ] Logging added for important operations
 - [ ] User is aware: What changed and why?
+- [ ] Non-trivial changes reference an approved CR with completed impact analysis
 
 ---
 
@@ -53,6 +60,9 @@ python -m scripts.test_llm_reasoning
 git status              # Verify no surprise files
 git add .              # Stage all changes
 git commit -m "type: description - date"
+# Provide CR id to pre-push hook enforcement
+$env:AISA_CR_ID="CR-YYYYMMDD-XXX"   # PowerShell
+# Bash alternative: export AISA_CR_ID=CR-YYYYMMDD-XXX
 git push               # Upload to remote
 ```
 

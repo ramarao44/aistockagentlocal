@@ -1,0 +1,78 @@
+PHASE 2 — CORE INTELLIGENCE (MVP)
+This is the first version that delivers real value to you and future users.
+
+9. Technical Analysis Engine
+Uses indicator framework
+
+Timeframe-aware logic
+
+Outputs Technical Insights JSON
+
+10. Fundamental Analysis Engine
+Valuation
+
+Growth
+
+Profitability
+
+Risk
+
+Outputs Fundamental Insights JSON
+
+11. Company Profile Module
+Sector
+
+Industry
+
+Market cap
+
+Business summary
+
+12. Simple Scoring Engine
+Technical score
+
+Fundamental score
+
+Sentiment score (placeholder)
+
+Weighted by timeframe
+
+13. AI Recommendation Engine
+Uses local models:
+
+qwen2.5:3b → main reasoning
+
+llama3.2:3b → fast reasoning
+
+phi3:3.8b → logic reasoning
+
+Outputs:
+
+Summary
+
+Sentiment
+
+Risks
+
+Opportunities
+
+Recommendation
+
+14. Watchlist
+Add/remove stocks
+
+Store user preferences
+
+15. Analysis History
+Store past analyses
+
+Enable trend comparison
+
+16. Basic Dashboard / UI
+Stock input
+
+Timeframe selection
+
+Analysis type selection
+
+Display result

@@ -18,6 +18,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
 
+from src.core.debug import dbg
 from src.database.crud import save_daily_record
 from src.database.sqlite_legacy import load_symbol_resolution_cache, save_symbol_resolution_cache
 
@@ -100,7 +101,7 @@ def resolve_symbol_from_web(user_input: str):
     return None
 
 
-def resolve_symbol_from_google_fallback(user_input: str):
+def resolve_symbol_from_google_fallback(user_input: str, master: dict | None = None):
     """Search Google/Moneycontrol to find correct ticker when Yahoo Finance search fails."""
     try:
         search_url = f"https://www.google.com/search?q={quote_plus(user_input)}+stock+nse+bse"
@@ -117,7 +118,7 @@ def resolve_symbol_from_google_fallback(user_input: str):
 
         return None
     except Exception as e:
-        print(f"[DEBUG] Google fallback failed: {str(e)}")
+        dbg(master, "INGESTION.MARKET", "GOOGLE_FALLBACK", "WARN", str(e))
         return None
 
 def normalize_ticker(user_input: str):
@@ -146,8 +147,9 @@ def normalize_ticker(user_input: str):
 # Fetch Price History
 # ---------------------------------------------------------
 
-def fetch_price_history(ticker: str, period="1y", interval="1d"):
+def fetch_price_history(ticker: str, period="1y", interval="1d", master: dict | None = None):
     try:
+        dbg(master, "INGESTION.MARKET", "FETCH_HISTORY", "OK", f"Fetching history for {ticker}")
         df = yf.download(ticker, period=period, interval=interval, progress=False)
         if df is None or df.empty:
             return None
@@ -163,9 +165,10 @@ def fetch_price_history(ticker: str, period="1y", interval="1d"):
                 # Fallback: convert to single-level by joining names
                 df.columns = ["_".join(map(str, c)).strip() for c in df.columns]
 
+        dbg(master, "INGESTION.MARKET", "FETCH_HISTORY", "OK", f"Fetched {len(df)} candles")
         return df
     except Exception as e:
-        print(f"[MarketFetcher] Error fetching data for {ticker}: {e}")
+        dbg(master, "INGESTION.MARKET", "FETCH_HISTORY", "ERR", str(e))
         return None
 
 
@@ -731,7 +734,8 @@ def fetch_moneycontrol_delivery(symbol: str):
 # Combined Market Data Fetcher (NSE + BSE)
 # ---------------------------------------------------------
 
-def fetch_indian_stock_data(user_input: str):
+def fetch_indian_stock_data(user_input: str, master: dict | None = None):
+    dbg(master, "INGESTION.MARKET", "FETCH", "OK", f"Starting market fetch for {user_input}")
     cache_key = _cache_key(user_input)
 
     candidates = []
@@ -760,14 +764,14 @@ def fetch_indian_stock_data(user_input: str):
     tickers = None
     used_source = None
     for pair, source in deduped_candidates:
-        df = fetch_price_history(pair["nse"])
+        df = fetch_price_history(pair["nse"], master=master)
         if df is not None:
             exchange = "NSE"
             tickers = pair
             used_source = source
             break
 
-        df = fetch_price_history(pair["bse"])
+        df = fetch_price_history(pair["bse"], master=master)
         if df is not None:
             exchange = "BSE"
             tickers = pair
@@ -776,20 +780,21 @@ def fetch_indian_stock_data(user_input: str):
 
     # Google search fallback if all methods failed
     if df is None or tickers is None:
-        google_resolved = resolve_symbol_from_google_fallback(user_input)
+        google_resolved = resolve_symbol_from_google_fallback(user_input, master=master)
         if google_resolved:
             tickers = google_resolved
-            df = fetch_price_history(tickers["nse"])
+            df = fetch_price_history(tickers["nse"], master=master)
             if df is not None:
                 exchange = "NSE"
             else:
-                df = fetch_price_history(tickers["bse"])
+                df = fetch_price_history(tickers["bse"], master=master)
                 if df is not None:
                     exchange = "BSE"
             if df is not None:
                 used_source = "google_fallback"
 
         if df is None:
+            dbg(master, "INGESTION.MARKET", "FETCH", "ERR", "Failed to fetch from all market sources")
             return {
                 "success": False,
                 "error": f"Could not fetch data for {user_input}. Tried Yahoo Finance and Google search."
@@ -1009,6 +1014,7 @@ def fetch_indian_stock_data(user_input: str):
         }
 
     except Exception as e:
+        dbg(master, "INGESTION.MARKET", "FETCH", "ERR", str(e))
         return {
             "success": False,
             "error": f"Indicator computation failed: {e}"

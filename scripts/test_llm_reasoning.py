@@ -292,6 +292,65 @@ def test_report_generation_timing():
         assert "Summary" in report
 
 
+def test_generate_ai_report_invokes_model_path_with_mode():
+    llm_input = {
+        "symbol": "RELIANCE",
+        "timeframe": "daily",
+        "ui": {"mode": "cloud"},
+        "technical": {},
+        "fundamental": {},
+        "sentiment": {},
+        "trend": {},
+        "weights": {},
+    }
+
+    model_report = (
+        "AI Stock Report (Standard) for RELIANCE.NS\n\n"
+        "Summary:\nS1.\nS2.\n\n"
+        "Indicators:\nI1.\nI2.\n\n"
+        "Sentiment:\nThe outlook is bullish. Confirmation is improving.\n\n"
+        "Risks:\nRisk one. Risk two.\n\n"
+        "Opportunities:\nOpportunity one. Opportunity two.\n\n"
+        "Recommendation:\nStagger entries. Keep stops tight.\n\n"
+        "SectionScore Summary: 4/5"
+    )
+
+    with patch("src.ai.llm_reasoner.generate_llm_report", return_value=model_report) as model_mock:
+        payload = llm_reasoner.generate_ai_report(llm_input)
+
+    model_mock.assert_called_once()
+    call_args, call_kwargs = model_mock.call_args
+    assert call_args[0] == "RELIANCE"
+    assert call_kwargs.get("mode") == "cloud"
+    # Current implementation forwards master context explicitly.
+    assert "master" in call_kwargs
+    assert payload["model_invoked"] is True
+    assert payload["model_mode"] == "cloud"
+    assert payload["sentiment"] == "bullish"
+    assert payload["summary"] == "S1. S2."
+
+
+def test_generate_ai_report_fallback_when_model_errors():
+    llm_input = {
+        "symbol": "RELIANCE",
+        "timeframe": "daily",
+        "ui": {"mode": "local"},
+        "technical": {"rsi": 72.0},
+        "fundamental": {"valuation": {"pe": 25.0}},
+        "sentiment": {"news_sentiment": -0.3},
+        "trend": {"trend_score": 35},
+        "weights": {"model_weights": {"technical": 0.6, "fundamental": 0.3, "sentiment": 0.1}},
+    }
+
+    with patch("src.ai.llm_reasoner.generate_llm_report", return_value="[Local LLM Error] model unavailable"):
+        payload = llm_reasoner.generate_ai_report(llm_input)
+
+    assert payload["model_invoked"] is False
+    assert payload["model_mode"] == "local"
+    assert payload["model_error"] is not None
+    assert payload["sentiment"] == "bearish"
+
+
 # ============================================================================
 # Run Tests
 # ============================================================================

@@ -1,0 +1,97 @@
+PHASE 1 — FOUNDATION (Platform Core)
+These features create the backbone of your entire system.
+They must be built first, and they must be perfect.
+
+1. Project Skeleton & Folder Structure
+Clean architecture
+
+Domain-driven structure
+
+Separation of concerns
+
+Module boundaries
+
+2. Configuration Management
+API keys
+
+DB connections
+
+Timeframe settings
+
+Indicator settings
+
+Model selection
+
+3. Common Domain Models & JSON Contracts
+Stock
+
+Candle
+
+Indicator
+
+Fundamental snapshot
+
+Sentiment snapshot
+
+Analysis request
+
+Analysis response
+
+4. Market Data Ingestion (NSE/BSE only)
+Fetch OHLCV
+
+Fetch fundamentals
+
+Fetch company profile
+
+Timeframe-aware data fetching
+
+5. Historical Data Storage
+Technical DB
+
+Fundamental DB
+
+Timeframe-based storage
+
+Permanent caching
+
+6. Generic Indicator Framework
+Reusable indicator functions:
+
+RSI
+
+MA/EMA
+
+MACD
+
+Bollinger Bands
+
+ATR
+
+ADX
+
+VWAP
+
+Volume Profile
+
+7. Timeframe Engine
+Maps timeframe → indicators → model weights:
+
+Intraday
+
+Weekly
+
+Monthly
+
+Quarterly
+
+Yearly
+
+8. Orchestration Engine
+Receives user request
+
+Decides which modules to activate
+
+Controls data flow
+
+Ensures JSON contract compliance

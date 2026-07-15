@@ -21,6 +21,7 @@ MASTER_CONTRACT_V1 = {
     "ai_report": {},
 
     "errors": [],
+    "debug": [],
 
     "data_quality": "unknown"
 }

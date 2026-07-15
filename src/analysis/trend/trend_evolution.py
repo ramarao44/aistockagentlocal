@@ -1,9 +1,13 @@
-def analyze_trend_evolution(series):
+from src.core.debug import dbg
+
+
+def analyze_trend_evolution(series, master: dict | None = None):
     """
     series = [{"trend_score": 78, "timestamp": ...}, ...]
     Returns a human-readable evolution summary.
     """
     if not series or len(series) < 2:
+        dbg(master, "ANALYSIS.TREND", "EVOLVE", "WARN", "Insufficient trend history")
         return {
             "latest_score": None,
             "short_term_change": 0,
@@ -31,6 +35,7 @@ def analyze_trend_evolution(series):
         else "flat long-term trend"
     )
 
+    dbg(master, "ANALYSIS.TREND", "EVOLVE", "OK", "Trend evolution computed")
     return {
         "latest_score": latest,
         "short_term_change": change,
@@ -40,9 +45,11 @@ def analyze_trend_evolution(series):
     }
 
 
-def compute_trend(candles: list[dict], technical: dict) -> dict:
+def compute_trend(candles: list[dict], technical: dict, master: dict | None = None) -> dict:
+    dbg(master, "ANALYSIS.TREND", "COMPUTE", "OK", "Computing trend contract")
     closes = [c.get("close") for c in (candles or []) if c.get("close") is not None]
     if len(closes) < 2:
+        dbg(master, "ANALYSIS.TREND", "COMPUTE", "WARN", "Insufficient candles for trend")
         return {
             "short_term": "unknown",
             "medium_term": "unknown",
@@ -79,6 +86,7 @@ def compute_trend(candles: list[dict], technical: dict) -> dict:
     score += 10 if long_term == "bullish" else -10 if long_term == "bearish" else 0
     score = max(0.0, min(100.0, round(score, 2)))
 
+    dbg(master, "ANALYSIS.TREND", "COMPUTE", "OK", "Trend contract computed")
     return {
         "short_term": short_term,
         "medium_term": medium_term,

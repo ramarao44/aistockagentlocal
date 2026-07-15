@@ -7,6 +7,8 @@ import time
 import re
 from typing import Any, cast
 
+from src.core.artifacts import sanitize_name, timestamp_slug, write_json_artifact, write_text_artifact
+from src.core.debug import dbg
 from src.ingestion.market_fetcher import fetch_indian_stock_data
 from src.analysis.fundamental import analyze_fundamentals
 from src.database.sqlite_legacy import load_latest_fundamental_data
@@ -320,7 +322,7 @@ def _deterministic_fallback_report(data: dict) -> str:
     )
 
 
-def _enforce_standardized_report(data: dict, raw_output: str, market_snapshot: str) -> str:
+def _enforce_standardized_report(data: dict, raw_output: str, market_snapshot: str, master: dict | None = None) -> str:
     clean = _strip_ansi(raw_output or "").strip()
     if _is_valid_standardized_report(clean):
         return clean
@@ -332,17 +334,17 @@ def _enforce_standardized_report(data: dict, raw_output: str, market_snapshot: s
         "Do not add any extra text before or after the sections.\n\n"
         + _build_standardized_report_prompt(market_snapshot)
     )
-    retry_output = _strip_ansi(main_reasoning(repair_prompt)).strip()
+    retry_output = _strip_ansi(main_reasoning(repair_prompt, master=master)).strip()
     if _is_valid_standardized_report(retry_output):
         return retry_output
 
-    print("[DEBUG] Using deterministic fallback report due to format mismatch")
+    dbg(master, "AI.LLM", "FORMAT", "WARN", "Using deterministic fallback report")
     return _deterministic_fallback_report(data)
 
 
-def run_model(model: str, prompt: str) -> str:
+def run_model(model: str, prompt: str, master: dict | None = None) -> str:
     """Call a local Ollama model via subprocess CLI."""
-    print(f"[DEBUG] run_model called - model={model}, prompt_length={len(prompt)}")
+    dbg(master, "AI.LLM", "CALL", "OK", f"Calling model {model}")
     start_time = time.time()
     
     try:
@@ -360,7 +362,7 @@ def run_model(model: str, prompt: str) -> str:
 
         # Backward compatibility for older Ollama builds that do not support --no-ansi.
         if result.returncode != 0 and "unknown flag: --no-ansi" in (result.stderr or ""):
-            print("[DEBUG] --no-ansi unsupported, retrying without flag")
+            dbg(master, "AI.LLM", "CALL", "WARN", "Retrying call without --no-ansi")
             result = subprocess.run(
                 ["ollama", "run", model],
                 input=prompt,
@@ -373,52 +375,52 @@ def run_model(model: str, prompt: str) -> str:
             )
         
         elapsed = time.time() - start_time
-        print(f"[DEBUG] run_model completed - model={model}, elapsed={elapsed:.2f}s, returncode={result.returncode}")
+        dbg(master, "AI.LLM", "CALL", "OK", f"Model call completed", t=round(elapsed * 1000, 2))
         
         if result.returncode != 0:
             detail = (result.stderr or "unknown error").strip()
-            print(f"[DEBUG] LLM error - stderr={detail[:100]}")
+            dbg(master, "AI.LLM", "CALL", "ERR", detail[:100])
             return f"[Local LLM Error] model={model} detail={detail}"
 
         output = (result.stdout or "").strip()
         if not output:
-            print(f"[DEBUG] LLM returned empty output")
+            dbg(master, "AI.LLM", "CALL", "ERR", "Model returned empty output")
             return f"[Local LLM Error] model={model} returned empty output"
         
-        print(f"[DEBUG] LLM success - output_length={len(output)}")
+        dbg(master, "AI.LLM", "CALL", "OK", f"Model output length {len(output)}")
         return output
         
     except FileNotFoundError:
-        print(f"[DEBUG] LLM FileNotFoundError - ollama command not found")
+        dbg(master, "AI.LLM", "CALL", "ERR", "ollama command not found")
         return "[Local LLM Error] 'ollama' command not found"
     except subprocess.TimeoutExpired:
-        print(f"[DEBUG] LLM TimeoutExpired - model={model}")
+        dbg(master, "AI.LLM", "CALL", "ERR", f"Model timeout: {model}")
         return f"[Local LLM Error] model={model} timed out"
     except Exception as exc:
-        print(f"[DEBUG] LLM Exception - {type(exc).__name__}: {exc}")
+        dbg(master, "AI.LLM", "CALL", "ERR", f"{type(exc).__name__}: {exc}")
         return f"[Local LLM Exception] {exc}"
 
 
-def main_reasoning(prompt: str) -> str:
-    print(f"[DEBUG] main_reasoning using model={MAIN_MODEL}")
-    return run_model(MAIN_MODEL, prompt)
+def main_reasoning(prompt: str, master: dict | None = None) -> str:
+    dbg(master, "AI.LLM", "PROMPT", "OK", f"Using main model {MAIN_MODEL}")
+    return run_model(MAIN_MODEL, prompt, master=master)
 
 
-def fast_reasoning(prompt: str) -> str:
-    print(f"[DEBUG] fast_reasoning using model={FAST_MODEL}")
-    return run_model(FAST_MODEL, prompt)
+def fast_reasoning(prompt: str, master: dict | None = None) -> str:
+    dbg(master, "AI.LLM", "PROMPT", "OK", f"Using fast model {FAST_MODEL}")
+    return run_model(FAST_MODEL, prompt, master=master)
 
 
-def logic_reasoning(prompt: str) -> str:
-    print(f"[DEBUG] logic_reasoning using model={LOGIC_MODEL}")
-    return run_model(LOGIC_MODEL, prompt)
+def logic_reasoning(prompt: str, master: dict | None = None) -> str:
+    dbg(master, "AI.LLM", "PROMPT", "OK", f"Using logic model {LOGIC_MODEL}")
+    return run_model(LOGIC_MODEL, prompt, master=master)
 
 
-def run_cloud_llm(prompt: str) -> str:
-    print(f"[DEBUG] run_cloud_llm called, prompt_length={len(prompt)}")
+def run_cloud_llm(prompt: str, master: dict | None = None) -> str:
+    dbg(master, "AI.LLM", "CALL", "OK", f"Calling cloud model, prompt length={len(prompt)}")
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        print(f"[DEBUG] Missing OPENAI_API_KEY for cloud fallback")
+        dbg(master, "AI.LLM", "CALL", "ERR", "Missing OPENAI_API_KEY")
         return "[Cloud LLM Error] Missing OPENAI_API_KEY"
 
     try:
@@ -429,13 +431,13 @@ def run_cloud_llm(prompt: str) -> str:
             model=CLOUD_MODEL,
             messages=[{"role": "user", "content": prompt}],
         )
-        print(f"[DEBUG] Cloud LLM success")
+        dbg(master, "AI.LLM", "CALL", "OK", "Cloud LLM call completed")
         return completion.choices[0].message["content"]
     except ImportError:
-        print(f"[DEBUG] openai package not installed")
+        dbg(master, "AI.LLM", "CALL", "ERR", "openai package not installed")
         return "[Cloud LLM Error] openai package is not installed"
     except Exception as exc:
-        print(f"[DEBUG] Cloud LLM Exception - {type(exc).__name__}: {exc}")
+        dbg(master, "AI.LLM", "CALL", "ERR", f"Cloud exception: {type(exc).__name__}: {exc}")
         return f"[Cloud LLM Exception] {exc}"
 
 
@@ -502,10 +504,57 @@ def explain_trend_score(data: dict, optimized: bool = False) -> str:
 
 
 def _is_error_response(text: str) -> bool:
-    return text.startswith("[Local LLM Error]") or text.startswith("[Local LLM Exception]")
+    return (
+        text.startswith("[Local LLM Error]")
+        or text.startswith("[Local LLM Exception]")
+        or text.startswith("[Cloud LLM Error]")
+        or text.startswith("[Cloud LLM Exception]")
+    )
 
 
-def generate_llm_report(ticker: str, mode: str = "local") -> str:
+def _debug_enabled(master: dict | None) -> bool:
+    ui_debug = bool((master or {}).get("ui", {}).get("debug", False))
+    env_debug = str(os.getenv("AISA_DEBUG", "0")).strip().lower() in {"1", "true", "yes", "on"}
+    return ui_debug or env_debug
+
+
+def _dump_llm_artifacts(master: dict | None, ticker: str, mode: str, prompt: str, report: str) -> None:
+    if not _debug_enabled(master):
+        return
+
+    ts = timestamp_slug()
+    safe_ticker = sanitize_name(ticker, default="unknown")
+
+    write_text_artifact("llm", f"prompt_{ts}_{safe_ticker}.txt", prompt)
+    write_json_artifact(
+        "llm",
+        f"reasoning_{ts}_{safe_ticker}.json",
+        {
+            "ticker": ticker,
+            "mode": mode,
+            "prompt_length": len(prompt or ""),
+            "output_length": len(report or ""),
+            "report": report,
+        },
+    )
+
+
+def _split_sentences(text: str) -> list[str]:
+    return [chunk.strip() for chunk in re.split(r"(?<=[.!?])\s+", (text or "").strip()) if chunk.strip()]
+
+
+def _infer_sentiment_label(text: str, fallback: str = "neutral") -> str:
+    lowered = (text or "").lower()
+    if "bullish" in lowered:
+        return "bullish"
+    if "bearish" in lowered:
+        return "bearish"
+    if "neutral" in lowered:
+        return "neutral"
+    return fallback
+
+
+def generate_llm_report(ticker: str, mode: str = "local", master: dict | None = None) -> str:
     """Generate report for a ticker using local models with optional cloud fallback.
 
     Supported modes:
@@ -513,14 +562,14 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
     - optimized: compact report for token/latency savings
     - cloud: force cloud report
     """
-    print(f"[DEBUG] generate_llm_report called - ticker={ticker}, mode={mode}")
+    dbg(master, "AI.LLM", "START", "OK", f"generate_llm_report ticker={ticker}, mode={mode}")
     start_time = time.time()
     
     mode_value = (mode or "local").strip().lower()
-    market_data = fetch_indian_stock_data(ticker)
+    market_data = fetch_indian_stock_data(ticker, master=master)
 
     if not market_data.get("success"):
-        print(f"[DEBUG] Market data fetch failed - {market_data.get('error', 'Unknown error')}")
+        dbg(master, "AI.LLM", "INPUT", "ERR", market_data.get("error", "Unknown error"))
         return f"Error fetching market data: {market_data.get('error', 'Unknown error')}"
 
     fundamentals = _load_or_compute_fundamentals(market_data.get("ticker", ticker), period="quarterly")
@@ -528,42 +577,91 @@ def generate_llm_report(ticker: str, mode: str = "local") -> str:
     standardized_prompt = _build_standardized_report_prompt(market_snapshot)
 
     if mode_value == "cloud":
-        return run_cloud_llm(standardized_prompt)
+        cloud_report = run_cloud_llm(standardized_prompt, master=master)
+        _dump_llm_artifacts(master, ticker, mode_value, standardized_prompt, cloud_report)
+        return cloud_report
 
     optimized = mode_value in {"optimized", "token_optimized", "token-optimized", "fast"}
-    print(f"[DEBUG] Running in {'optimized' if optimized else 'standard'} mode")
+    dbg(master, "AI.LLM", "MODE", "OK", f"Running {'optimized' if optimized else 'standard'} mode")
 
-    report_body = main_reasoning(standardized_prompt)
+    report_body = main_reasoning(standardized_prompt, master=master)
     if _is_error_response(report_body):
-        print(f"[DEBUG] Report generation failed locally, checking cloud fallback")
+        dbg(master, "AI.LLM", "CALL", "WARN", "Local LLM failed, checking cloud fallback")
         if os.getenv("ENABLE_CLOUD_FALLBACK", "1") == "1":
-            cloud_report = run_cloud_llm(standardized_prompt)
+            cloud_report = run_cloud_llm(standardized_prompt, master=master)
             if cloud_report.startswith("[Cloud LLM Error]") or cloud_report.startswith("[Cloud LLM Exception]"):
                 return cloud_report
-            report_body = _enforce_standardized_report(market_data, cloud_report, market_snapshot)
+            report_body = _enforce_standardized_report(market_data, cloud_report, market_snapshot, master=master)
         else:
             return report_body
     else:
-        report_body = _enforce_standardized_report(market_data, report_body, market_snapshot)
+        report_body = _enforce_standardized_report(market_data, report_body, market_snapshot, master=master)
 
     section_map = _extract_section_map(report_body)
     section_scores = score_report_sections(section_map)
     score_block = _format_score_block(section_scores)
 
     elapsed = time.time() - start_time
-    print(f"[DEBUG] Report generation completed - elapsed={elapsed:.2f}s")
+    dbg(master, "AI.LLM", "END", "OK", "Report generation completed", t=round(elapsed * 1000, 2))
 
-    return (
+    final_report = (
         f"AI Stock Report ({'Optimized' if optimized else 'Standard'}) for {market_data.get('ticker', ticker)}\n\n"
         f"{report_body}\n\n"
         f"{score_block}"
     )
+
+    _dump_llm_artifacts(master, ticker, mode_value, standardized_prompt, final_report)
+    return final_report
 
 
 def generate_ai_report(llm_input: dict) -> dict:
     """Build a contract-friendly AI output from pipeline context."""
     symbol = llm_input.get("symbol") or "UNKNOWN"
     timeframe = llm_input.get("timeframe") or "daily"
+    master = llm_input.get("master")
+    ui = llm_input.get("ui") or {}
+    mode = "local"
+    if isinstance(ui, dict):
+        mode = (ui.get("mode") or "local").strip().lower()
+
+    # Preferred path: invoke the model-backed report generator and adapt it into
+    # the LLM contract expected by the orchestrator.
+    try:
+        dbg(master, "AI.LLM", "PROMPT", "OK", "Prompt built")
+        raw_report = generate_llm_report(symbol, mode=mode, master=master)
+        dbg(master, "AI.LLM", "CALL", "OK", "LLM call completed")
+    except Exception as exc:
+        dbg(master, "AI.LLM", "CALL", "ERR", str(exc))
+        raw_report = f"[Local LLM Exception] {exc}"
+
+    if not _is_error_response(raw_report or "") and not (raw_report or "").startswith("Error fetching market data"):
+        section_map = _extract_section_map(raw_report)
+
+        summary_text = section_map.get("Summary", "").strip()
+        sentiment_text = section_map.get("Sentiment", "").strip()
+        risks_text = section_map.get("Risks", "").strip()
+        opportunities_text = section_map.get("Opportunities", "").strip()
+        recommendation_text = section_map.get("Recommendation", "").strip()
+
+        if any([summary_text, sentiment_text, risks_text, opportunities_text, recommendation_text]):
+            sentiment_label = _infer_sentiment_label(sentiment_text)
+            probability_map = {
+                "bullish": 0.68,
+                "bearish": 0.35,
+                "neutral": 0.52,
+            }
+            return {
+                "summary": summary_text or f"{symbol} analysis generated via {mode} mode.",
+                "sentiment": sentiment_label,
+                "risks": _split_sentences(risks_text) or ["No explicit risks extracted from model output."],
+                "opportunities": _split_sentences(opportunities_text) or ["No explicit opportunities extracted from model output."],
+                "recommendation": recommendation_text or "Wait for stronger confirmation before acting.",
+                "probability": probability_map.get(sentiment_label, 0.52),
+                "data_quality": "good",
+                "model_invoked": True,
+                "model_mode": mode,
+            }
+
     technical = llm_input.get("technical") or {}
     fundamental = llm_input.get("fundamental") or {}
     sentiment = llm_input.get("sentiment") or {}
@@ -633,4 +731,7 @@ def generate_ai_report(llm_input: dict) -> dict:
         "recommendation": recommendation,
         "probability": probability,
         "data_quality": "good",
+        "model_invoked": False,
+        "model_mode": mode,
+        "model_error": raw_report if _is_error_response(raw_report or "") else None,
     }

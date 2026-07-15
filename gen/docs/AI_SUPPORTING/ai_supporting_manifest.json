@@ -1,0 +1,88 @@
+{
+  "version": "1.0",
+  "generated_on": "2026-07-13",
+  "classification": "AI_SUPPORTING",
+  "source_of_truth": "gen/docs/document_index.json",
+  "documents": [
+    {
+      "doc_id": "DOC-005",
+      "path": "gen/docs/AI_relevance_policy.md",
+      "title": "AI Relevance Policy"
+    },
+    {
+      "doc_id": "DOC-006",
+      "path": "gen/docs/coverage_scope_contract.md",
+      "title": "Coverage Scope Contract"
+    },
+    {
+      "doc_id": "DOC-007",
+      "path": "gen/docs/document_update_protocol.md",
+      "title": "Document Update Protocol"
+    },
+    {
+      "doc_id": "DOC-008",
+      "path": "gen/docs/validation_gates.md",
+      "title": "Validation Gates"
+    },
+    {
+      "doc_id": "DOC-009",
+      "path": "gen/docs/drift_detection_protocol.md",
+      "title": "Drift Detection Protocol"
+    },
+    {
+      "doc_id": "DOC-010",
+      "path": "docs/DESIGN_DEVELOPMENT_DOCUMENT.md",
+      "title": "Design Development Document"
+    },
+    {
+      "doc_id": "DOC-011",
+      "path": "docs/README.md",
+      "title": "Documentation Index"
+    },
+    {
+      "doc_id": "DOC-012",
+      "path": "docs/AI_INSTRUCTIONS.md",
+      "title": "AI Instructions"
+    },
+    {
+      "doc_id": "DOC-013",
+      "path": "docs/QUICK_REFERENCE.md",
+      "title": "Quick Reference"
+    },
+    {
+      "doc_id": "DOC-022",
+      "path": "docs/PRODUCT_CURRENT_STATUS.md",
+      "title": "Product Current Status"
+    },
+    {
+      "doc_id": "DOC-023",
+      "path": "gen/docs/requirement_test_traceability.json",
+      "title": "Requirement Test Traceability"
+    },
+    {
+      "doc_id": "DOC-024",
+      "path": "docs/baseline/README.md",
+      "title": "Baseline Snapshot Governance"
+    },
+    {
+      "doc_id": "DOC-025",
+      "path": "docs/baseline/active_baseline.json",
+      "title": "Active Baseline Pointer"
+    },
+    {
+      "doc_id": "DOC-026",
+      "path": "docs/change-requests/README.md",
+      "title": "Change Request Workspace"
+    },
+    {
+      "doc_id": "DOC-027",
+      "path": "docs/change-requests/templates/CR_TEMPLATE.md",
+      "title": "Change Request Template"
+    },
+    {
+      "doc_id": "DOC-028",
+      "path": "docs/change-requests/templates/AI_HANDOFF_TEMPLATE.md",
+      "title": "AI Handoff Template"
+    }
+  ]
+}
