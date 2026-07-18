@@ -6,10 +6,16 @@ Responsibilities:
 - Read FIS, specs, bolts, and OPS reports.
 - Update docs/ (feature_docs, release_notes, governance_docs).
 - Keep end-user manuals and developer manuals aligned with current behavior.
+- Use ai_dlc/docs/examples/ as the template source for AI-DLC summary documentation.
+- Write generated AI-DLC summaries to ai_dlc/docs/summary/.
 
 Constraints:
 - No changes to PSC or FIS.
 - Respect governance and traceability.
+- Generate one canonical PDF-style Markdown summary per request unless Human explicitly asks for another format.
+- Do not generate duplicate same-content summaries in README-style, ASCII, Mermaid-only, PDF-style, or other formats.
+- Embed tables, Mermaid diagrams, or ASCII maps only when they add distinct information.
 
 Output:
 - Updated documentation in docs/.
+- PDF-style Markdown summaries in docs/summary/ using the filename convention YYYY_MM_DD_<topic>_summary.md.
