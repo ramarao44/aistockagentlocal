@@ -1,0 +1,58 @@
+{
+  "baseline_id": "baseline_20260719_000624",
+  "created_at": "2026-07-18T15:06:24+00:00",
+  "source_count": 10,
+  "source_root": "ai_dlc/baseline/snapshots/baseline_20260719_000624/source",
+  "sources": [
+    {
+      "path": "README.md",
+      "size_bytes": 4603,
+      "sha256": "ee396fc2d0f636dced579c4c95bba988c6877a34c7e88df4c0cb7040bff140ae"
+    },
+    {
+      "path": "ai_dlc/AI_DLC_MANIFEST.yaml",
+      "size_bytes": 1370,
+      "sha256": "6bb2c9cacae6ed206996576a80076bde8ee63aba8ac495c8534cbf90111c5e40"
+    },
+    {
+      "path": "ai_dlc/psc.md",
+      "size_bytes": 1868,
+      "sha256": "f0ca3790239e83446b9075839c744113c13d37f40a56b4b49582236523ffdc3d"
+    },
+    {
+      "path": "ai_dlc/human_intent.md",
+      "size_bytes": 477,
+      "sha256": "3ef0af3bdd6953970dfd0ce6734231a9b0ce514c034c388c30c7d2c763bdd55d"
+    },
+    {
+      "path": "ai_dlc/fis.md",
+      "size_bytes": 332,
+      "sha256": "776c98063fcf8994d2e57d14dd55a4e3be10a6309f4754db982ceead93d5daaa"
+    },
+    {
+      "path": "ai_dlc/governance/role_model.md",
+      "size_bytes": 904,
+      "sha256": "c1b504a51b11fa9e0d7b1090b0559325fcd7904c522bf44e1255b34dc7c6b9c4"
+    },
+    {
+      "path": "ai_dlc/governance/safety_rules.md",
+      "size_bytes": 517,
+      "sha256": "cb2abb008d38ea18cbdeb7c5c5aad8cd38f14b115c9f06b2770a1ad92c3417ce"
+    },
+    {
+      "path": "ai_dlc/governance/file_access_rules.md",
+      "size_bytes": 478,
+      "sha256": "c753117a9c3c181e1dbc61ea14a86fc35f460e8c72c2767ecabf9a3fa353e1de"
+    },
+    {
+      "path": "ai_dlc/runtime/execution_flow.md",
+      "size_bytes": 450,
+      "sha256": "63ce8037bb485deeb6ee7bbed79837beb9fbc07918a8f12b342614ad6858df1e"
+    },
+    {
+      "path": "ai_dlc/traceability/TRACEABILITY_TEMPLATE.md",
+      "size_bytes": 238,
+      "sha256": "22b86eb04497ceec5b0c507524f27dd6adb43ade08a869537a600bb35b2f670d"
+    }
+  ]
+}

@@ -105,18 +105,6 @@ python scripts/build.py --profile ai-dlc-check
 
 Push-time enforcement now runs AI-DLC gate first, then CR impact + CI profile validation.
 
-For CI/release runs, AI-DLC now also enforces fresh runtime + traceability evidence tied to the current CR id.
-
-- `ai_dlc/runtime/gic_latest.md`
-- `ai_dlc/runtime/ccs_latest.md`
-- `ai_dlc/traceability/latest_traceability_map.md`
-
-The freshness window defaults to 120 minutes and can be overridden:
-
-```powershell
-python scripts/build.py --profile ci --cr-id CR-YYYYMMDD-XXX --ai-dlc-evidence-max-age-minutes 120
-```
-
 Smoke script modes:
 
 ```powershell
