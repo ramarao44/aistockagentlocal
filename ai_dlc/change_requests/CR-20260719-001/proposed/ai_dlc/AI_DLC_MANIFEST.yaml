@@ -1,6 +1,25 @@
 ai_dlc_version: 1.0.0
-status: DRAFT
-mode: brownfield-migration
+status: ACTIVE
+mode: brownfield-active
+AI_DLC_VERSION: 1.0
+AI_DLC_STATUS: READY
+PROJECT_NAME: AI Stock Agent
+DOMAIN: Indian Stock Analysis
+PSC_VERSION: 1.0
+FIS_VERSION: 0.0
+GOVERNANCE_VERSION: 1.0
+INSTALL_DATE: 2026-07-19
+OWNER: Rama Rao
+ROLES:
+  - HIR
+  - PL
+  - AA
+  - DEV
+  - QA
+  - OPS
+  - DOC
+  - DME
+  - CCS
 activation:
   ready_after_checks: true
   gic_required_before_each_step: true
@@ -29,6 +48,42 @@ paths:
   prompts: ai_dlc/prompts
   governance: ai_dlc/governance
   traceability: ai_dlc/traceability
+ARTIFACTS:
+  PSC: psc.md
+  HUMAN_INTENT: human_intent.md
+  FIS: fis.md
+  PROMPTS_DIR: prompts/
+  SPECS_DIR: specs/
+  BOLTS_DIR: bolts/
+  TESTS_DIR: tests/
+  DEFECTS_DIR: defects/
+  CHANGE_REQUESTS_DIR: change_requests/
+  TICKETS_DIR: tickets/
+  DOCS_DIR: docs/
+  TRACEABILITY_DIR: traceability/
+  GOVERNANCE_DIR: governance/
+  RUNTIME_DIR: runtime/
+FILE_ACCESS_POLICY:
+  HUMAN_EDITABLE:
+    - psc.md
+    - human_intent.md
+    - defects/
+    - change_requests/
+  AI_OWNED:
+    - fis.md
+    - specs/
+    - bolts/
+    - tests/
+    - prompts/
+    - docs/
+    - traceability/
+    - tickets/
+    - governance/
+    - runtime/
+  CCS_CONTROLLED:
+    - AI_DLC_MANIFEST.yaml
+    - governance/
+    - prompts/
 frozen_versions:
   role_model: 1.0
   hir_prompt: 1.0
@@ -47,7 +102,7 @@ frozen_versions:
   cr_template: 1.0
   fis_template: 1.0
 migration:
-  source_repo_state: legacy-governance-present
-  legacy_docs_cleanup: pending
+  source_repo_state: ai-dlc-governed
+  legacy_docs_cleanup: completed
   deletion_inventory_file: ai_dlc/docs/governance_docs/migration_deletion_inventory.md
   migration_report_file: ai_dlc/docs/governance_docs/migration_report.md
