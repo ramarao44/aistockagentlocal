@@ -16,6 +16,7 @@ Status: Completed
 - Enforced pre-push AI-DLC gate before CI gate.
 - Updated README governance guidance to ai_dlc paths.
 - Removed superseded legacy documentation paths listed in migration deletion inventory.
+- Documented code-first traceability policy: active AI-DLC lineage is derived from code and tests, not legacy requirement catalogs.
 
 ## 4. Validation Outcomes
 - AI-DLC gate validation passed using profile ai-dlc-check.
@@ -24,6 +25,7 @@ Status: Completed
 
 ## 5. Pending Risks
 - Legacy automation outside build.py may still reference deleted legacy docs and should be checked in future runs.
+- Requirement-based legacy report conventions may still exist in some tooling until code pipeline updates are applied.
 
 ## 6. Activation Recommendation
 - Activation criteria met. AI-DLC is now the active governance framework for this repository.

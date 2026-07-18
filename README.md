@@ -144,7 +144,14 @@ Included in clean:
 Excluded from clean (must never be deleted):
 - `ai_dlc/**` (including `ai_dlc/baseline/**` and `ai_dlc/change_requests/**`)
 - `reports/**` canonical evidence outputs
-- source and test roots (`src/**`, `scripts/**`, `tests/**`, `data/**`, `feature-requirements/**`)
+- source and test roots (`src/**`, `scripts/**`, `tests/**`, `data/**`)
+
+### AI-DLC Traceability Policy (Code-First)
+
+- Traceability evidence is generated from code and executed tests through the AI-DLC pipeline.
+- Legacy requirement catalogs are treated as optional historical references only.
+- Governance approval and release checks must rely on current code, tests, runtime evidence, and AI-DLC artifacts.
+- `feature-requirements/**` is non-authoritative for active AI-DLC traceability decisions.
 
 ## Baseline and Change Request Workflow
 

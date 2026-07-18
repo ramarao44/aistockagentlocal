@@ -21,8 +21,8 @@ Migrate the existing AI Stock Agent repository into AI-DLC governance without br
 
 1. Inventory & Classification
    - Scan repo and list all modules, tests, docs.
-   - Map each to feature areas (01-06 specs).
-   - Record in traceability/fr_traceability_matrix.md.
+   - Map each to feature areas by code module boundaries and test coverage.
+   - Record in traceability/fr_traceability_matrix.md using code-first mappings.
 
 2. Baseline FIS Construction
    - From existing specs and docs, build initial FIS describing current behavior.
@@ -37,8 +37,9 @@ Migrate the existing AI Stock Agent repository into AI-DLC governance without br
    - Link specs to existing code and tests via traceability/.
 
 5. Traceability Matrix
-   - Build FR traceability matrix linking:
-     - PSC -> FIS -> Specs -> Code -> Tests -> Reports.
+    - Build AI-DLC traceability matrix linking:
+       - PSC -> FIS -> Specs -> Code -> Tests -> Runtime -> Docs -> Reports.
+    - Derive mappings from code structure and test execution evidence, not legacy requirement catalogs.
    - Store in traceability/fr_traceability_matrix.md.
 
 6. Governance Hooks
@@ -65,3 +66,4 @@ Migrate the existing AI Stock Agent repository into AI-DLC governance without br
 
 ## 5. Notes
 This blueprint is conceptual; actual execution is done by AISA (AI-DLC Solution Architect) and other roles using the prompts and artifacts defined in ai_dlc/.
+Legacy requirement files may remain for historical context, but are not authoritative inputs for active AI-DLC traceability.
