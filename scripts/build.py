@@ -66,8 +66,8 @@ REPORT_OUTPUTS = [
     REPO_ROOT / "reports" / "TEST_REPORT.md",
     REPO_ROOT / "reports" / "run_summary_latest.csv",
     REPO_ROOT / "reports" / "test_case_results_latest.csv",
-    REPO_ROOT / "reports" / "failing_requirements_latest.csv",
-    REPO_ROOT / "reports" / "requirement_status_latest.csv",
+    REPO_ROOT / "reports" / "failing_test_cases_latest.csv",
+    REPO_ROOT / "reports" / "module_status_latest.csv",
 ]
 
 BASELINE_SOURCE_DOCS = [
