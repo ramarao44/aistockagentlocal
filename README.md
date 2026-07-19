@@ -155,6 +155,12 @@ Excluded from clean (must never be deleted):
 
 ## Baseline and Change Request Workflow
 
+### Baseline Snapshot Lifecycle
+
+Baseline snapshots are created with `python scripts/build.py --profile baseline-sync` and stored under `ai_dlc/baseline/snapshots/`. The active snapshot is recorded in `ai_dlc/baseline/active_baseline.json` and provides the governed comparison point for change requests.
+
+Baseline snapshots are protected from default clean/build cleanup. Old snapshot cleanup, if needed, must be deliberate and governed so CR comparisons do not lose their reference baseline.
+
 1. Generate baseline snapshot from original docs:
 
 ```powershell
