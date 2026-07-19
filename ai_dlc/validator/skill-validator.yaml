@@ -1,0 +1,85 @@
+validator:
+  name: skill-validator
+  version: 2.0
+  description: Validate all AI-DLC skills before execution to prevent drift, boundary violations, and governance bypass.
+
+  checks:
+
+    schema-validation:
+      description: Ensure required fields exist.
+      required_keys:
+        - name
+        - version
+        - role
+        - description
+        - constraints
+        - writes-to
+        - governed-flow
+
+    psc-boundary:
+      description: Ensure skill does not violate PSC domain boundaries.
+      forbidden_keywords:
+        - trading
+        - portfolio management
+        - financial advice
+        - crypto
+        - forex
+        - real-time execution
+        - market expansion
+
+    role-boundary:
+      description: Ensure skill matches correct AI-DLC role permissions.
+      role_permissions:
+        HIR:
+          allowed_writes:
+            - ai_dlc/tickets/
+            - ai_dlc/change_requests/
+            - ai_dlc/fis.md
+        PL:
+          allowed_writes:
+            - ai_dlc/fis.md
+        AA:
+          allowed_writes:
+            - ai_dlc/specs/
+            - ai_dlc/traceability/
+        DEV:
+          allowed_writes:
+            - ai_dlc/bolts/
+            - src/
+            - scripts/
+        QA:
+          allowed_writes:
+            - ai_dlc/tests/
+        OPS:
+          allowed_writes:
+            - ai_dlc/runtime/
+        DOC:
+          allowed_writes:
+            - ai_dlc/docs/
+            - ai_dlc/docs/summary/
+            - ai_dlc/docs/examples/
+        DME:
+          allowed_writes:
+            - ai_dlc/traceability/
+        CCS:
+          allowed_writes:
+            - ai_dlc/governance/
+            - ai_dlc/tickets/
+            - ai_dlc/change_requests/
+        AISA:
+          allowed_writes:
+            - ai_dlc/docs/
+            - ai_dlc/traceability/
+
+    protected-paths:
+      description: Skills must never write to protected files.
+      forbidden:
+        - ai_dlc/psc.md
+        - ai_dlc/human_intent.md
+        - ai_dlc/AI_DLC_MANIFEST.yaml
+        - ai_dlc/prompts/
+
+  outputs:
+    - validation_report
+    - skill_execution_permission
+    - governance_log
