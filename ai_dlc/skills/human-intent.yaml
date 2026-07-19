@@ -1,0 +1,22 @@
+skill:
+  name: human-intent
+  version: 1.0
+  role: HIR
+  description: Submit new Human Intent and trigger HIR → PSC → FIS Draft.
+  inputs:
+    - name: intent_text
+      required: true
+  outputs:
+    - FIS Draft
+    - Decision Ticket
+  governed-flow:
+    - PSC validation
+    - HIR classification
+    - FIS drafting
+  constraints:
+    - Must not modify PSC
+    - Must not bypass CCS
+  writes-to:
+    - ai_dlc/tickets/decision_tickets/
+  requires:
+    - hir.prompt

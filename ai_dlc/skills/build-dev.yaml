@@ -1,0 +1,18 @@
+skill:
+  name: build-dev
+  version: 1.0
+  role: DEV
+  description: Run development build with debug=on, tests=on, docs=off.
+  inputs: []
+  outputs:
+    - Build artifacts
+  governed-flow:
+    - DEV bolt execution
+    - QA test run
+  constraints:
+    - Must not modify PSC or FIS
+  writes-to:
+    - build/dev/
+  requires:
+    - dev.prompt
+    - qa.prompt

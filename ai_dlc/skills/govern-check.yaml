@@ -1,0 +1,22 @@
+skill:
+  name: govern-check
+  version: 1.0
+  role: CCS
+  description: Validate all AI-DLC artifacts before merge.
+  inputs: []
+  outputs:
+    - Governance Report
+  governed-flow:
+    - PSC check
+    - FIS check
+    - Specs check
+    - Bolts check
+    - Tests check
+    - OPS check
+    - Traceability check
+  constraints:
+    - Must not approve unsafe changes
+  writes-to:
+    - ai_dlc/governance/
+  requires:
+    - ccs.prompt

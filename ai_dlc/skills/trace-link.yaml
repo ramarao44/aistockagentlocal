@@ -1,0 +1,18 @@
+skill:
+  name: trace-link
+  version: 1.0
+  role: DME
+  description: Update traceability matrices.
+  inputs: []
+  outputs:
+    - Updated FR matrix
+    - Updated version matrix
+    - Updated defect matrix
+  governed-flow:
+    - DME traceability update
+  constraints:
+    - Must not modify PSC or FIS
+  writes-to:
+    - ai_dlc/traceability/
+  requires:
+    - dme.prompt

@@ -1,0 +1,19 @@
+skill:
+  name: cr-prepare
+  version: 1.0
+  role: HIR
+  description: Create CR scaffolding for governance changes.
+  inputs:
+    - name: cr_title
+      required: true
+  outputs:
+    - CR file
+  governed-flow:
+    - CR folder creation
+    - Baseline sync
+  constraints:
+    - Must not modify PSC directly
+  writes-to:
+    - ai_dlc/change_requests/
+  requires:
+    - hir.prompt
