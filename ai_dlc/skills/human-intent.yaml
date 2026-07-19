@@ -17,8 +17,6 @@ skill:
     - Must not modify PSC
     - Must not bypass CCS
   writes-to:
-    - ai_dlc/fis.md
     - ai_dlc/tickets/decision_tickets/
   requires:
     - hir.prompt
-    - psc.md
