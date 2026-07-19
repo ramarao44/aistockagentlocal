@@ -4,7 +4,6 @@ import glob
 import importlib
 import inspect
 import io
-import json
 import os
 import runpy
 import sys
@@ -15,62 +14,10 @@ from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPORTS_DIR = os.path.join(ROOT, "reports")
-TRACEABILITY_PATH = os.path.join(ROOT, "gen", "docs", "requirement_test_traceability.json")
 
 
 def iso_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-
-
-def load_traceability() -> dict:
-    if not os.path.exists(TRACEABILITY_PATH):
-        return {
-            "requirements": [],
-            "canonical_requirements": [],
-            "test_case_map": {},
-            "test_module_map": {},
-            "legacy_to_canonical": {},
-            "deprecated_legacy_requirement_ids": [],
-        }
-    with open(TRACEABILITY_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def canonicalize_requirement_ids(requirement_ids: list[str], traceability: dict) -> list[str]:
-    legacy_to_canonical = traceability.get("legacy_to_canonical", {})
-    deprecated_legacy = set(traceability.get("deprecated_legacy_requirement_ids", []))
-    canonical_catalog = {
-        req.get("requirement_id")
-        for req in traceability.get("canonical_requirements", [])
-        if req.get("requirement_id")
-    }
-
-    canonical_ids = []
-    for req_id in requirement_ids:
-        mapped = legacy_to_canonical.get(req_id)
-        if mapped:
-            canonical_ids.append(mapped)
-            continue
-        if req_id in canonical_catalog:
-            canonical_ids.append(req_id)
-            continue
-        if req_id in deprecated_legacy:
-            continue
-        canonical_ids.append(req_id)
-
-    return sorted(set(canonical_ids))
-
-
-def map_requirements(test_case_id: str, module_name: str, traceability: dict) -> list[str]:
-    case_map = traceability.get("test_case_map", {})
-    module_map = traceability.get("test_module_map", {})
-
-    reqs = case_map.get(test_case_id, [])
-    if reqs:
-        return sorted(set(reqs))
-
-    reqs = module_map.get(module_name, [])
-    return sorted(set(reqs))
 
 
 class CaseCaptureResult(unittest.TextTestResult):
@@ -135,7 +82,7 @@ class CaseCaptureResult(unittest.TextTestResult):
 def run_script_module(module_name: str, file_path: str) -> list[dict]:
     rows = []
 
-    # Prefer explicit test_ callables for granular requirement mapping.
+    # Prefer explicit test_ callables to preserve test-level evidence.
     # Parse source first so smoke scripts are not imported unless needed.
     with open(file_path, "r", encoding="utf-8") as f:
         tree = ast.parse(f.read(), filename=file_path)
@@ -228,95 +175,43 @@ def write_csv(path: str, rows: list[dict], headers: list[str]) -> None:
             writer.writerow({h: row.get(h, "") for h in headers})
 
 
-def build_requirement_rows(
-    traceability: dict,
-    rows: list[dict],
-    run_id: str,
-    timestamp: str,
-) -> tuple[list[dict], list[dict]]:
-    requirements = traceability.get("canonical_requirements") or traceability.get("requirements", [])
-    test_case_map = traceability.get("test_case_map", {})
-    module_map = traceability.get("test_module_map", {})
-    legacy_to_canonical = traceability.get("legacy_to_canonical", {})
-
-    reverse_aliases = {}
-    for legacy_id, canonical_id in legacy_to_canonical.items():
-        if not canonical_id:
-            continue
-        reverse_aliases.setdefault(canonical_id, set()).add(legacy_id)
-
-    failing_by_req = {}
-    by_req = {}
-    for req in requirements:
-        req_id = req.get("requirement_id")
-        legacy_ids = sorted(set(req.get("legacy_ids", []) + list(reverse_aliases.get(req_id, set()))))
-        by_req[req_id] = {
-            "run_id": run_id,
-            "updated_at": timestamp,
-            "requirement_id": req_id,
-            "feature": req.get("feature", ""),
-            "requirement_title": req.get("title", ""),
-            "status": req.get("status", "Pending Input"),
-            "outcome": "Not Covered",
-            "evidence_quality": req.get("evidence_quality", "pending"),
-            "owner": req.get("owner", "Pending Input"),
-            "mapped_test_count": 0,
-            "passing_test_count": 0,
-            "failing_test_count": 0,
-            "legacy_requirement_ids_text": ";".join(legacy_ids),
-        }
-
+def build_module_status_rows(rows: list[dict], run_id: str, timestamp: str) -> list[dict]:
+    by_module = {}
     for row in rows:
-        mapped = row.get("canonical_requirement_ids", [])
-        if not mapped:
-            mapped = canonicalize_requirement_ids(test_case_map.get(row["test_case_id"], []), traceability)
-        if not mapped:
-            mapped = canonicalize_requirement_ids(module_map.get(row["module"], []), traceability)
-
-        for req_id in mapped:
-            if req_id not in by_req:
-                continue
-            by_req[req_id]["mapped_test_count"] += 1
-            if row["result"] == "passed":
-                by_req[req_id]["passing_test_count"] += 1
-            if row["result"] == "failed":
-                by_req[req_id]["failing_test_count"] += 1
-                failing_by_req.setdefault(req_id, []).append(row["test_case_id"])
-
-    for req_id, failing_tests in failing_by_req.items():
-        by_req[req_id]["status"] = "Not Working"
-
-    for req_id, row in by_req.items():
-        if row["mapped_test_count"] == 0:
-            row["outcome"] = "Not Covered"
-        elif req_id in failing_by_req:
-            row["outcome"] = "Failed"
-        elif row["passing_test_count"] == row["mapped_test_count"]:
-            row["outcome"] = "Passed"
-        else:
-            row["outcome"] = "Partial"
-
-    failing_rows = []
-    for req_id, failing_tests in sorted(failing_by_req.items()):
-        failing_rows.append(
-            {
+        module = row["module"]
+        if module not in by_module:
+            by_module[module] = {
                 "run_id": run_id,
-                "requirement_id": req_id,
-                "legacy_requirement_ids_text": by_req[req_id].get("legacy_requirement_ids_text", ""),
-                "failing_test_case_ids": ";".join(sorted(set(failing_tests))),
-                "status_impact": "Not Working",
+                "updated_at": timestamp,
+                "module": module,
+                "total_test_count": 0,
+                "passing_test_count": 0,
+                "failing_test_count": 0,
+                "skipped_test_count": 0,
+                "outcome": "Passed",
+                "status_impact": "Working",
             }
-        )
 
-    return sorted(by_req.values(), key=lambda x: x["requirement_id"]), failing_rows
+        by_module[module]["total_test_count"] += 1
+        if row["result"] == "passed":
+            by_module[module]["passing_test_count"] += 1
+        elif row["result"] == "failed":
+            by_module[module]["failing_test_count"] += 1
+            by_module[module]["outcome"] = "Failed"
+            by_module[module]["status_impact"] = "Not Working"
+        else:
+            by_module[module]["skipped_test_count"] += 1
+            if by_module[module]["outcome"] == "Passed":
+                by_module[module]["outcome"] = "Partial"
+
+    return sorted(by_module.values(), key=lambda x: x["module"])
 
 
 def write_markdown_summary(
     timestamp: str,
     executed: list[str],
     rows: list[dict],
-    failing_requirements: list[dict],
-    requirement_rows: list[dict],
+    module_rows: list[dict],
     gate_verdict: str,
 ) -> None:
     passed = sum(1 for r in rows if r["result"] == "passed")
@@ -352,43 +247,26 @@ def write_markdown_summary(
         for row in failed_rows:
             lines.append(f"- {row['test_case_id']}")
 
-    lines.extend(["", "## Failing Requirements"])
-    if not failing_requirements:
-        lines.append("- None")
-    else:
-        for req in failing_requirements:
-            lines.append(
-                f"- {req['requirement_id']} (tests: {req['failing_test_case_ids']})"
-            )
-
     outcome_counts = {}
-    for row in requirement_rows:
+    for row in module_rows:
         outcome = row.get("outcome", "Unknown")
         outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
 
-    lines.extend(["", "## Requirement Outcomes"])
+    lines.extend(["", "## Module Outcomes"])
     lines.append(f"- Passed: {outcome_counts.get('Passed', 0)}")
     lines.append(f"- Failed: {outcome_counts.get('Failed', 0)}")
-    lines.append(f"- Not Covered: {outcome_counts.get('Not Covered', 0)}")
     if outcome_counts.get("Partial", 0):
         lines.append(f"- Partial: {outcome_counts.get('Partial', 0)}")
 
-    failed_requirements = [r for r in requirement_rows if r.get("outcome") == "Failed"]
-    not_covered_requirements = [r for r in requirement_rows if r.get("outcome") == "Not Covered"]
-
-    lines.extend(["", "## Failed Requirement IDs"])
-    if not failed_requirements:
+    failed_modules = [r for r in module_rows if r.get("outcome") == "Failed"]
+    lines.extend(["", "## Failed Modules"])
+    if not failed_modules:
         lines.append("- None")
     else:
-        for req in failed_requirements:
-            lines.append(f"- {req['requirement_id']} (failing tests: {req['failing_test_count']})")
-
-    lines.extend(["", "## Not Covered Requirement IDs"])
-    if not not_covered_requirements:
-        lines.append("- None")
-    else:
-        for req in not_covered_requirements:
-            lines.append(f"- {req['requirement_id']}")
+        for module in failed_modules:
+            lines.append(
+                f"- {module['module']} (failing tests: {module['failing_test_count']})"
+            )
 
     out_path = os.path.join(REPORTS_DIR, "TEST_REPORT.md")
     os.makedirs(REPORTS_DIR, exist_ok=True)
@@ -400,7 +278,6 @@ def main() -> int:
     os.chdir(ROOT)
     sys.path.insert(0, ROOT)
 
-    traceability = load_traceability()
     timestamp = iso_now()
     run_id = str(int(time.time()))
 
@@ -417,9 +294,7 @@ def main() -> int:
         executed_commands.append(f"python -m {module}")
         print("===", module, "===")
         script_rows = run_script_module(module, path)
-        for row in script_rows:
-            row["requirement_ids"] = map_requirements(row["test_case_id"], row["module"], traceability)
-            rows.append(row)
+        rows.extend(script_rows)
         print("RESULT", ", ".join(sorted({r["result"].upper() for r in script_rows})))
 
     print("FOUND", len(unittest_tests), "UNITTEST MODULES")
@@ -427,20 +302,24 @@ def main() -> int:
         name = os.path.splitext(path.replace("\\", "/"))[0].replace("/", ".")
         executed_commands.append(f"python -m unittest {name}")
         print("===", name, "===")
-        for row in run_unittest_module(name):
-            row["requirement_ids"] = map_requirements(row["test_case_id"], row["module"], traceability)
-            rows.append(row)
-
-    for row in rows:
-        row["requirement_ids"] = sorted(set(row.get("requirement_ids", [])))
-        row["canonical_requirement_ids"] = canonicalize_requirement_ids(row["requirement_ids"], traceability)
-        row["requirement_ids_text"] = ";".join(row["requirement_ids"])
-        row["canonical_requirement_ids_text"] = ";".join(row["canonical_requirement_ids"])
+        rows.extend(run_unittest_module(name))
 
     failed = sum(1 for r in rows if r["result"] == "failed")
     gate_verdict = "PASS" if failed == 0 else "FAIL"
 
-    requirement_rows, failing_requirement_rows = build_requirement_rows(traceability, rows, run_id, timestamp)
+    module_rows = build_module_status_rows(rows, run_id, timestamp)
+    failing_rows = [
+        {
+            "run_id": run_id,
+            "test_case_id": row["test_case_id"],
+            "module": row["module"],
+            "test_file": row["test_file"],
+            "duration_ms": row["duration_ms"],
+            "message": row["message"],
+        }
+        for row in rows
+        if row["result"] == "failed"
+    ]
 
     write_csv(
         os.path.join(REPORTS_DIR, "run_summary_latest.csv"),
@@ -467,35 +346,29 @@ def main() -> int:
             "test_file",
             "result",
             "duration_ms",
-            "requirement_ids_text",
-            "canonical_requirement_ids_text",
             "message",
         ],
     )
 
     write_csv(
-        os.path.join(REPORTS_DIR, "failing_requirements_latest.csv"),
-        failing_requirement_rows,
-        ["run_id", "requirement_id", "legacy_requirement_ids_text", "failing_test_case_ids", "status_impact"],
+        os.path.join(REPORTS_DIR, "failing_test_cases_latest.csv"),
+        failing_rows,
+        ["run_id", "test_case_id", "module", "test_file", "duration_ms", "message"],
     )
 
     write_csv(
-        os.path.join(REPORTS_DIR, "requirement_status_latest.csv"),
-        requirement_rows,
+        os.path.join(REPORTS_DIR, "module_status_latest.csv"),
+        module_rows,
         [
             "run_id",
             "updated_at",
-            "requirement_id",
-            "feature",
-            "requirement_title",
-            "status",
-            "outcome",
-            "evidence_quality",
-            "owner",
-            "mapped_test_count",
+            "module",
+            "total_test_count",
             "passing_test_count",
             "failing_test_count",
-            "legacy_requirement_ids_text",
+            "skipped_test_count",
+            "outcome",
+            "status_impact",
         ],
     )
 
@@ -503,8 +376,7 @@ def main() -> int:
         timestamp,
         executed_commands,
         rows,
-        failing_requirement_rows,
-        requirement_rows,
+        module_rows,
         gate_verdict,
     )
 

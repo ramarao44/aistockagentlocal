@@ -38,6 +38,14 @@ if [ -z "$CR_ID" ]; then
 fi
 
 echo ""
+echo "Running AI-DLC gate: python scripts/build.py --profile ai-dlc-check"
+python scripts/build.py --profile ai-dlc-check
+if [ $? -ne 0 ]; then
+    echo "❌ FAIL: AI-DLC gate failed"
+    exit 1
+fi
+
+echo ""
 echo "Running gated validation: python scripts/build.py --profile ci --cr-id $CR_ID"
 python scripts/build.py --profile ci --cr-id "$CR_ID"
 if [ $? -ne 0 ]; then

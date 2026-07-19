@@ -1,0 +1,108 @@
+ai_dlc_version: 1.0.0
+status: ACTIVE
+mode: brownfield-active
+AI_DLC_VERSION: 1.0
+AI_DLC_STATUS: READY
+PROJECT_NAME: AI Stock Agent
+DOMAIN: Indian Stock Analysis
+PSC_VERSION: 1.0
+FIS_VERSION: 0.0
+GOVERNANCE_VERSION: 1.0
+INSTALL_DATE: 2026-07-19
+OWNER: Rama Rao
+ROLES:
+  - HIR
+  - PL
+  - AA
+  - DEV
+  - QA
+  - OPS
+  - DOC
+  - DME
+  - CCS
+activation:
+  ready_after_checks: true
+  gic_required_before_each_step: true
+  ccs_required_for_protected_changes: true
+ownership:
+  human_editable:
+    - ai_dlc/psc.md
+    - ai_dlc/human_intent.md
+    - ai_dlc/defects/*.md
+    - ai_dlc/change_requests/*.md
+  ai_owned:
+    - ai_dlc/fis.md
+    - ai_dlc/prompts/**
+    - ai_dlc/specs/**
+    - ai_dlc/bolts/**
+    - ai_dlc/tests/**
+    - ai_dlc/tickets/**
+    - ai_dlc/docs/**
+    - ai_dlc/traceability/**
+    - ai_dlc/governance/**
+    - ai_dlc/runtime/**
+paths:
+  psc: ai_dlc/psc.md
+  human_intent: ai_dlc/human_intent.md
+  fis: ai_dlc/fis.md
+  prompts: ai_dlc/prompts
+  governance: ai_dlc/governance
+  traceability: ai_dlc/traceability
+ARTIFACTS:
+  PSC: psc.md
+  HUMAN_INTENT: human_intent.md
+  FIS: fis.md
+  PROMPTS_DIR: prompts/
+  SPECS_DIR: specs/
+  BOLTS_DIR: bolts/
+  TESTS_DIR: tests/
+  DEFECTS_DIR: defects/
+  CHANGE_REQUESTS_DIR: change_requests/
+  TICKETS_DIR: tickets/
+  DOCS_DIR: docs/
+  TRACEABILITY_DIR: traceability/
+  GOVERNANCE_DIR: governance/
+  RUNTIME_DIR: runtime/
+FILE_ACCESS_POLICY:
+  HUMAN_EDITABLE:
+    - psc.md
+    - human_intent.md
+    - defects/
+    - change_requests/
+  AI_OWNED:
+    - fis.md
+    - specs/
+    - bolts/
+    - tests/
+    - prompts/
+    - docs/
+    - traceability/
+    - tickets/
+    - governance/
+    - runtime/
+  CCS_CONTROLLED:
+    - AI_DLC_MANIFEST.yaml
+    - governance/
+    - prompts/
+frozen_versions:
+  role_model: 1.0
+  hir_prompt: 1.0
+  aa_prompt: 1.1
+  dev_prompt: 1.0
+  qa_prompt: 1.0
+  ops_prompt: 1.0
+  dme_prompt: 1.0
+  doc_prompt: 1.0
+  ccs_prompt: 1.0
+  aisa_prompt: 1.0
+  governance_rules: 1.0
+  review_gate: 1.0
+  bolt_template: 1.1
+  dr_template: 1.0
+  cr_template: 1.0
+  fis_template: 1.0
+migration:
+  source_repo_state: ai-dlc-governed
+  legacy_docs_cleanup: completed
+  deletion_inventory_file: ai_dlc/docs/governance_docs/migration_deletion_inventory.md
+  migration_report_file: ai_dlc/docs/governance_docs/migration_report.md

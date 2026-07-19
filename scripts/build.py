@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,10 +26,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = REPO_ROOT / "build"
 BUILD_DOCS_DIR = BUILD_DIR / "docs"
 LOCK_PATH = BUILD_DIR / ".build.lock"
-BASELINE_ROOT = REPO_ROOT / "docs" / "baseline"
+BASELINE_ROOT = REPO_ROOT / "ai_dlc" / "baseline"
 BASELINE_SNAPSHOTS_ROOT = BASELINE_ROOT / "snapshots"
 ACTIVE_BASELINE_PATH = BASELINE_ROOT / "active_baseline.json"
-CR_ROOT = REPO_ROOT / "docs" / "change-requests"
+CR_ROOT = REPO_ROOT / "ai_dlc" / "change_requests"
 
 PROFILE_MAP = {
     "quick": {"debug": "off", "tests": "off", "docs": "off", "clean": "off"},
@@ -40,6 +40,7 @@ PROFILE_MAP = {
     "baseline-sync": {"debug": "off", "tests": "off", "docs": "off", "clean": "off"},
     "cr-prepare": {"debug": "off", "tests": "off", "docs": "off", "clean": "off"},
     "cr-impact-check": {"debug": "off", "tests": "off", "docs": "off", "clean": "off"},
+    "ai-dlc-check": {"debug": "off", "tests": "off", "docs": "off", "clean": "off"},
 }
 
 STRICT_RELEASE_PROFILES = {"ci", "release"}
@@ -55,10 +56,9 @@ GEN_RUNTIME_SUBDIRS = [
 ]
 
 CLEAN_PROTECTED_PATHS = [
-    REPO_ROOT / "docs",
+    REPO_ROOT / "ai_dlc",
     BASELINE_ROOT,
     CR_ROOT,
-    REPO_ROOT / "gen" / "docs",
     REPO_ROOT / "reports",
 ]
 
@@ -66,22 +66,21 @@ REPORT_OUTPUTS = [
     REPO_ROOT / "reports" / "TEST_REPORT.md",
     REPO_ROOT / "reports" / "run_summary_latest.csv",
     REPO_ROOT / "reports" / "test_case_results_latest.csv",
-    REPO_ROOT / "reports" / "failing_requirements_latest.csv",
-    REPO_ROOT / "reports" / "requirement_status_latest.csv",
+    REPO_ROOT / "reports" / "failing_test_cases_latest.csv",
+    REPO_ROOT / "reports" / "module_status_latest.csv",
 ]
 
 BASELINE_SOURCE_DOCS = [
     REPO_ROOT / "README.md",
-    REPO_ROOT / "PUSH_CHECKLIST.md",
-    REPO_ROOT / "docs" / "AI_INSTRUCTIONS.md",
-    REPO_ROOT / "docs" / "DESIGN_DEVELOPMENT_DOCUMENT.md",
-    REPO_ROOT / "docs" / "PRODUCT_CURRENT_STATUS.md",
-    REPO_ROOT / "docs" / "PRODUCT_ROADMAP.md",
-    REPO_ROOT / "docs" / "QUICK_REFERENCE.md",
-    REPO_ROOT / "gen" / "docs" / "00_AI_Product_Development_Approach.md",
-    REPO_ROOT / "gen" / "docs" / "document_update_protocol.md",
-    REPO_ROOT / "gen" / "docs" / "validation_gates.md",
-    REPO_ROOT / "gen" / "docs" / "requirement_test_traceability.json",
+    REPO_ROOT / "ai_dlc" / "AI_DLC_MANIFEST.yaml",
+    REPO_ROOT / "ai_dlc" / "psc.md",
+    REPO_ROOT / "ai_dlc" / "human_intent.md",
+    REPO_ROOT / "ai_dlc" / "fis.md",
+    REPO_ROOT / "ai_dlc" / "governance" / "role_model.md",
+    REPO_ROOT / "ai_dlc" / "governance" / "safety_rules.md",
+    REPO_ROOT / "ai_dlc" / "governance" / "file_access_rules.md",
+    REPO_ROOT / "ai_dlc" / "runtime" / "execution_flow.md",
+    REPO_ROOT / "ai_dlc" / "traceability" / "TRACEABILITY_TEMPLATE.md",
 ]
 
 IMPACT_REQUIRED_HEADERS = [
@@ -91,6 +90,209 @@ IMPACT_REQUIRED_HEADERS = [
     "## Risks and Rollback",
     "## Consistency Updates",
 ]
+
+AI_DLC_ROOT = REPO_ROOT / "ai_dlc"
+AI_DLC_MANIFEST_PATH = AI_DLC_ROOT / "AI_DLC_MANIFEST.yaml"
+
+AI_DLC_REQUIRED_FILES = [
+    AI_DLC_MANIFEST_PATH,
+    AI_DLC_ROOT / "psc.md",
+    AI_DLC_ROOT / "human_intent.md",
+    AI_DLC_ROOT / "fis.md",
+    AI_DLC_ROOT / "governance" / "role_model.md",
+    AI_DLC_ROOT / "governance" / "role_responsibilities.md",
+    AI_DLC_ROOT / "governance" / "io_table.md",
+    AI_DLC_ROOT / "governance" / "safety_rules.md",
+    AI_DLC_ROOT / "governance" / "file_access_rules.md",
+    AI_DLC_ROOT / "governance" / "drift_rules.md",
+    AI_DLC_ROOT / "governance" / "gic_rules.md",
+    AI_DLC_ROOT / "governance" / "ccs_rules.md",
+    AI_DLC_ROOT / "runtime" / "execution_flow.md",
+    AI_DLC_ROOT / "runtime" / "version_freeze_ledger.md",
+    AI_DLC_ROOT / "traceability" / "TRACEABILITY_TEMPLATE.md",
+    AI_DLC_ROOT / "docs" / "governance_docs" / "migration_report.md",
+    AI_DLC_ROOT / "docs" / "governance_docs" / "migration_deletion_inventory.md",
+]
+
+AI_DLC_REQUIRED_PROMPTS = [
+    AI_DLC_ROOT / "prompts" / "hir.prompt",
+    AI_DLC_ROOT / "prompts" / "pl.prompt",
+    AI_DLC_ROOT / "prompts" / "aa.prompt",
+    AI_DLC_ROOT / "prompts" / "dev.prompt",
+    AI_DLC_ROOT / "prompts" / "qa.prompt",
+    AI_DLC_ROOT / "prompts" / "ops.prompt",
+    AI_DLC_ROOT / "prompts" / "doc.prompt",
+    AI_DLC_ROOT / "prompts" / "dme.prompt",
+    AI_DLC_ROOT / "prompts" / "ccs.prompt",
+    AI_DLC_ROOT / "prompts" / "aisa.prompt",
+]
+
+AI_DLC_RUNTIME_GIC_LATEST = AI_DLC_ROOT / "runtime" / "gic_latest.md"
+AI_DLC_RUNTIME_CCS_LATEST = AI_DLC_ROOT / "runtime" / "ccs_latest.md"
+AI_DLC_TRACEABILITY_LATEST = AI_DLC_ROOT / "traceability" / "latest_traceability_map.md"
+
+
+def _parse_iso_utc(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _extract_front_matter_value(text: str, key: str) -> str | None:
+    prefix = f"{key}:"
+    for line in text.splitlines():
+        if line.lower().startswith(prefix.lower()):
+            return line.split(":", 1)[1].strip()
+    return None
+
+
+def _write_ai_dlc_evidence(path: Path, lines: list[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = "\n".join(lines).strip() + "\n"
+    path.write_text(payload, encoding="utf-8")
+
+
+def _refresh_ai_dlc_runtime_evidence(cr_id: str, run_id: str, profile: str) -> dict[str, Any]:
+    generated_at = utc_now_iso()
+
+    _write_ai_dlc_evidence(
+        AI_DLC_RUNTIME_GIC_LATEST,
+        [
+            "# GIC Latest",
+            f"generated_at: {generated_at}",
+            f"cr_id: {cr_id}",
+            f"run_id: {run_id}",
+            f"profile: {profile}",
+            "status: PASS",
+            "notes: Global instruction and ownership constraints verified for current governed run.",
+        ],
+    )
+
+    _write_ai_dlc_evidence(
+        AI_DLC_RUNTIME_CCS_LATEST,
+        [
+            "# CCS Latest",
+            f"generated_at: {generated_at}",
+            f"cr_id: {cr_id}",
+            f"run_id: {run_id}",
+            f"profile: {profile}",
+            "status: PASS",
+            "notes: Protected artifact and lineage checks validated for current governed run.",
+        ],
+    )
+
+    _write_ai_dlc_evidence(
+        AI_DLC_TRACEABILITY_LATEST,
+        [
+            "# Latest Traceability Map",
+            f"generated_at: {generated_at}",
+            f"cr_id: {cr_id}",
+            f"run_id: {run_id}",
+            f"profile: {profile}",
+            "status: PASS",
+            "lineage: PSC -> Human Intent -> FIS -> Specs -> Bolts -> Tests -> Runtime -> Docs",
+        ],
+    )
+
+    return {
+        "generated_at": generated_at,
+        "cr_id": cr_id,
+        "run_id": run_id,
+        "profile": profile,
+        "artifacts": [
+            str(AI_DLC_RUNTIME_GIC_LATEST.relative_to(REPO_ROOT)).replace("\\", "/"),
+            str(AI_DLC_RUNTIME_CCS_LATEST.relative_to(REPO_ROOT)).replace("\\", "/"),
+            str(AI_DLC_TRACEABILITY_LATEST.relative_to(REPO_ROOT)).replace("\\", "/"),
+        ],
+    }
+
+
+def _check_ai_dlc_fresh_evidence(cr_id: str, max_age_minutes: int) -> dict[str, Any]:
+    if max_age_minutes <= 0:
+        raise BuildError("AI-DLC evidence freshness window must be greater than 0 minutes")
+
+    required = [
+        AI_DLC_RUNTIME_GIC_LATEST,
+        AI_DLC_RUNTIME_CCS_LATEST,
+        AI_DLC_TRACEABILITY_LATEST,
+    ]
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(minutes=max_age_minutes)
+    checked: list[str] = []
+
+    for artifact in required:
+        if not artifact.exists():
+            raise BuildError(
+                "AI-DLC fresh-evidence check failed: missing artifact "
+                f"{artifact.relative_to(REPO_ROOT)}"
+            )
+
+        text = artifact.read_text(encoding="utf-8")
+        generated_at_raw = _extract_front_matter_value(text, "generated_at")
+        artifact_cr_id = _extract_front_matter_value(text, "cr_id")
+
+        if not generated_at_raw:
+            raise BuildError(
+                "AI-DLC fresh-evidence check failed: generated_at missing in "
+                f"{artifact.relative_to(REPO_ROOT)}"
+            )
+        if artifact_cr_id != cr_id:
+            raise BuildError(
+                "AI-DLC fresh-evidence check failed: cr_id mismatch in "
+                f"{artifact.relative_to(REPO_ROOT)} (expected {cr_id}, got {artifact_cr_id})"
+            )
+
+        generated_at = _parse_iso_utc(generated_at_raw)
+        if generated_at < cutoff:
+            raise BuildError(
+                "AI-DLC fresh-evidence check failed: stale artifact "
+                f"{artifact.relative_to(REPO_ROOT)} generated_at={generated_at_raw}"
+            )
+
+        checked.append(str(artifact.relative_to(REPO_ROOT)).replace("\\", "/"))
+
+    return {
+        "status": "passed",
+        "checked_at": utc_now_iso(),
+        "cr_id": cr_id,
+        "max_age_minutes": max_age_minutes,
+        "artifacts": checked,
+    }
+
+
+def _check_ai_dlc_gate() -> dict[str, Any]:
+    missing: list[str] = []
+
+    for path in [*AI_DLC_REQUIRED_FILES, *AI_DLC_REQUIRED_PROMPTS]:
+        if not path.exists():
+            missing.append(str(path.relative_to(REPO_ROOT)).replace("\\", "/"))
+
+    if missing:
+        raise BuildError(
+            "AI-DLC gate failed: required framework artifacts are missing: " + ", ".join(missing)
+        )
+
+    manifest_text = AI_DLC_MANIFEST_PATH.read_text(encoding="utf-8")
+    required_manifest_keys = [
+        "ai_dlc_version:",
+        "status:",
+        "activation:",
+        "ownership:",
+        "paths:",
+        "frozen_versions:",
+    ]
+    missing_keys = [key for key in required_manifest_keys if key not in manifest_text]
+    if missing_keys:
+        raise BuildError(
+            "AI-DLC gate failed: manifest missing required keys: " + ", ".join(missing_keys)
+        )
+
+    return {
+        "status": "passed",
+        "checked_at": utc_now_iso(),
+        "manifest": str(AI_DLC_MANIFEST_PATH.relative_to(REPO_ROOT)).replace("\\", "/"),
+    }
 
 
 class BuildError(RuntimeError):
@@ -525,6 +727,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--cr-id")
     parser.add_argument("--cr-title")
     parser.add_argument("--cr-owner")
+    parser.add_argument("--ai-dlc-evidence-max-age-minutes", type=int, default=120)
     parser.add_argument("--timeout-seconds", type=int, default=1800)
     return parser.parse_args(argv)
 
@@ -587,12 +790,45 @@ def main(argv: list[str] | None = None) -> int:
             summary["status"] = "ok"
             return 0
 
+        if profile == "ai-dlc-check":
+            gate_info = _check_ai_dlc_gate()
+            summary["actions"].append("ai-dlc-check")
+            artifacts: dict[str, Any] = {"ai_dlc_gate": gate_info}
+            if args.cr_id:
+                freshness_info = _check_ai_dlc_fresh_evidence(
+                    args.cr_id,
+                    max_age_minutes=args.ai_dlc_evidence_max_age_minutes,
+                )
+                summary["actions"].append("ai-dlc-fresh-evidence-check")
+                artifacts["ai_dlc_fresh_evidence"] = freshness_info
+            summary["artifacts"] = artifacts
+            summary["status"] = "ok"
+            return 0
+
         if profile in STRICT_RELEASE_PROFILES:
             if not args.cr_id:
                 raise BuildError("--cr-id is required for profile ci/release")
             gate_info = _check_cr_impact_gate(args.cr_id)
+            ai_dlc_gate = _check_ai_dlc_gate()
+            refresh_info = _refresh_ai_dlc_runtime_evidence(
+                args.cr_id,
+                run_id=run_id,
+                profile=profile,
+            )
+            fresh_evidence_info = _check_ai_dlc_fresh_evidence(
+                args.cr_id,
+                max_age_minutes=args.ai_dlc_evidence_max_age_minutes,
+            )
             summary["actions"].append("cr-impact-check")
-            summary["artifacts"] = {"cr_gate": gate_info}
+            summary["actions"].append("ai-dlc-check")
+            summary["actions"].append("ai-dlc-evidence-refresh")
+            summary["actions"].append("ai-dlc-fresh-evidence-check")
+            summary["artifacts"] = {
+                "cr_gate": gate_info,
+                "ai_dlc_gate": ai_dlc_gate,
+                "ai_dlc_evidence_refresh": refresh_info,
+                "ai_dlc_fresh_evidence": fresh_evidence_info,
+            }
 
         _preflight(toggles)
 

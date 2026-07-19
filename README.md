@@ -86,6 +86,35 @@ build-profiles\all-profiles-smoke.bat
 build-profiles\baseline-sync.bat
 build-profiles\cr-prepare.bat CR-YYYYMMDD-XXX "title"
 build-profiles\cr-impact-check.bat CR-YYYYMMDD-XXX
+build-profiles\ai-dlc-check.bat
+```
+
+## AI-DLC Framework (Standalone Governance)
+
+This repository now includes a standalone AI-DLC framework rooted at `ai_dlc/`.
+
+- Source of truth: `ai_dlc/AI_DLC_MANIFEST.yaml`
+- Human-owned inputs: `ai_dlc/psc.md`, `ai_dlc/human_intent.md`, defect reports, and change requests.
+- AI-owned governed artifacts: prompts, specs, bolts, tests, runtime, docs, and traceability under `ai_dlc/`.
+
+Run AI-DLC gate validation:
+
+```powershell
+python scripts/build.py --profile ai-dlc-check
+```
+
+Push-time enforcement now runs AI-DLC gate first, then CR impact + CI profile validation.
+
+For CI/release runs, AI-DLC now also enforces fresh runtime + traceability evidence tied to the current CR id.
+
+- `ai_dlc/runtime/gic_latest.md`
+- `ai_dlc/runtime/ccs_latest.md`
+- `ai_dlc/traceability/latest_traceability_map.md`
+
+The freshness window defaults to 120 minutes and can be overridden:
+
+```powershell
+python scripts/build.py --profile ci --cr-id CR-YYYYMMDD-XXX --ai-dlc-evidence-max-age-minutes 120
 ```
 
 Smoke script modes:
@@ -113,12 +142,36 @@ Included in clean:
 - `gen/tmp/**`
 
 Excluded from clean (must never be deleted):
-- `docs/**` (including `docs/baseline/**` and `docs/change-requests/**`)
-- `gen/docs/**` governance artifacts
+- `ai_dlc/**` (including `ai_dlc/baseline/**` and `ai_dlc/change_requests/**`)
 - `reports/**` canonical evidence outputs
-- source and test roots (`src/**`, `scripts/**`, `tests/**`, `data/**`, `feature-requirements/**`)
+- source and test roots (`src/**`, `scripts/**`, `tests/**`, `data/**`)
+
+### AI-DLC Traceability Policy (Code-First)
+
+- Traceability evidence is generated from code and executed tests through the AI-DLC pipeline.
+- Archived legacy requirement and design catalogs are treated as optional historical references only.
+- Governance approval and release checks must rely on current code, tests, runtime evidence, and AI-DLC artifacts.
+- Archived docs under `ai_dlc/docs/archive/legacy-requirements/**` are non-authoritative for active AI-DLC traceability decisions.
+
+### Archived Historical Documentation
+
+Historical requirement, design, and audit materials that are no longer active guidance are preserved under `ai_dlc/docs/archive/legacy-requirements/**`.
+
+Archived examples include the former top-level `feature-requirements/**`, `RefactorDesign/**`, and `reports/TEST_REPORT_AUDIT_2026_07_09.md` materials. These files are historical reference only; they are not active acceptance criteria, traceability authority, or release evidence.
+
+### Prompt Governance
+
+Active AI-DLC role prompts under `ai_dlc/prompts/**` are CCS-controlled versioned artifacts. Prompt versions are governed baselines that may evolve through Human Intent or Change Request context, CCS review, and AI-DLC validation.
+
+See `ai_dlc/docs/governance_docs/prompt_versioning_policy.md` for prompt lifecycle rules.
 
 ## Baseline and Change Request Workflow
+
+### Baseline Snapshot Lifecycle
+
+Baseline snapshots are created with `python scripts/build.py --profile baseline-sync` and stored under `ai_dlc/baseline/snapshots/`. The active snapshot is recorded in `ai_dlc/baseline/active_baseline.json` and provides the governed comparison point for change requests.
+
+Baseline snapshots are protected from default clean/build cleanup. Old snapshot cleanup, if needed, must be deliberate and governed so CR comparisons do not lose their reference baseline.
 
 1. Generate baseline snapshot from original docs:
 
@@ -132,7 +185,7 @@ python scripts/build.py --profile baseline-sync
 python scripts/build.py --profile cr-prepare --cr-id CR-20260713-001 --cr-title "example"
 ```
 
-3. Update only files under `docs/change-requests/<CR-ID>/proposed`.
+3. Update only files under `ai_dlc/change_requests/<CR-ID>/proposed`.
 
 4. Complete impact analysis and set CR status to `approved`.
 
