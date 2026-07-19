@@ -1,0 +1,19 @@
+skill:
+  name: cr-approve
+  version: 1.0
+  role: PL
+  description: Approve CR for implementation.
+  inputs:
+    - name: cr_id
+      required: true
+  outputs:
+    - Approved CR status
+  governed-flow:
+    - PL review
+    - Status transition to approved
+  constraints:
+    - Must not bypass governance
+  writes-to:
+    - ai_dlc/change_requests/<cr_id>/metadata.json
+  requires:
+    - pl.prompt

@@ -1,0 +1,22 @@
+skill:
+  name: build-release
+  version: 1.0
+  role: CCS
+  description: Run release validation with debug=off, tests=on, docs=on, clean=on.
+  inputs: []
+  outputs:
+    - Release package
+  governed-flow:
+    - QA tests
+    - OPS validation
+    - DOC update
+    - CCS final gate
+  constraints:
+    - Must not bypass CCS
+  writes-to:
+    - release/
+  requires:
+    - qa.prompt
+    - ops.prompt
+    - doc.prompt
+    - ccs.prompt

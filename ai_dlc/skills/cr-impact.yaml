@@ -1,0 +1,18 @@
+skill:
+  name: cr-impact
+  version: 1.0
+  role: AA
+  description: Perform impact analysis for CR.
+  inputs:
+    - name: cr_id
+      required: true
+  outputs:
+    - Impact Analysis Report
+  governed-flow:
+    - PR/FAQ/Risk validation
+  constraints:
+    - Must not generate specs
+  writes-to:
+    - ai_dlc/change_requests/<cr_id>/
+  requires:
+    - aa.prompt

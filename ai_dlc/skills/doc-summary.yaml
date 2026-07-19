@@ -1,0 +1,18 @@
+skill:
+  name: doc-summary
+  version: 1.0
+  role: DOC
+  description: Generate AI-DLC summary tables and diagrams.
+  inputs: []
+  outputs:
+    - Summary tables
+    - Mermaid diagrams
+    - Architecture maps
+  governed-flow:
+    - DOC documentation update
+  constraints:
+    - Must not modify PSC or FIS
+  writes-to:
+    - ai_dlc/docs/summary/
+  requires:
+    - doc.prompt

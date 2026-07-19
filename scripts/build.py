@@ -127,6 +127,23 @@ AI_DLC_REQUIRED_PROMPTS = [
     AI_DLC_ROOT / "prompts" / "aisa.prompt",
 ]
 
+AI_DLC_REQUIRED_SKILLS = [
+    AI_DLC_ROOT / "skills" / "human-intent.yaml",
+    AI_DLC_ROOT / "skills" / "cr-prepare.yaml",
+    AI_DLC_ROOT / "skills" / "cr-impact.yaml",
+    AI_DLC_ROOT / "skills" / "cr-approve.yaml",
+    AI_DLC_ROOT / "skills" / "build-dev.yaml",
+    AI_DLC_ROOT / "skills" / "build-release.yaml",
+    AI_DLC_ROOT / "skills" / "govern-check.yaml",
+    AI_DLC_ROOT / "skills" / "test-suite.yaml",
+    AI_DLC_ROOT / "skills" / "doc-summary.yaml",
+    AI_DLC_ROOT / "skills" / "trace-link.yaml",
+    AI_DLC_ROOT / "skills" / "skill-catalog.md",
+    AI_DLC_ROOT / "skills" / "skill-flow.md",
+    AI_DLC_ROOT / "skills" / "README.md",
+    AI_DLC_ROOT / "skills" / "__init__.py",
+]
+
 AI_DLC_RUNTIME_GIC_LATEST = AI_DLC_ROOT / "runtime" / "gic_latest.md"
 AI_DLC_RUNTIME_CCS_LATEST = AI_DLC_ROOT / "runtime" / "ccs_latest.md"
 AI_DLC_TRACEABILITY_LATEST = AI_DLC_ROOT / "traceability" / "latest_traceability_map.md"
@@ -264,7 +281,7 @@ def _check_ai_dlc_fresh_evidence(cr_id: str, max_age_minutes: int) -> dict[str, 
 def _check_ai_dlc_gate() -> dict[str, Any]:
     missing: list[str] = []
 
-    for path in [*AI_DLC_REQUIRED_FILES, *AI_DLC_REQUIRED_PROMPTS]:
+    for path in [*AI_DLC_REQUIRED_FILES, *AI_DLC_REQUIRED_PROMPTS, *AI_DLC_REQUIRED_SKILLS]:
         if not path.exists():
             missing.append(str(path.relative_to(REPO_ROOT)).replace("\\", "/"))
 

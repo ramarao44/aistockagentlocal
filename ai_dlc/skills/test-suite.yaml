@@ -1,0 +1,18 @@
+skill:
+  name: test-suite
+  version: 1.0
+  role: QA
+  description: Run specific test modules.
+  inputs:
+    - name: module
+      required: true
+  outputs:
+    - Test results
+  governed-flow:
+    - QA test execution
+  constraints:
+    - Must not modify specs
+  writes-to:
+    - ai_dlc/tests/results/
+  requires:
+    - qa.prompt
