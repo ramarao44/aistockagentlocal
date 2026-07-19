@@ -149,9 +149,21 @@ Excluded from clean (must never be deleted):
 ### AI-DLC Traceability Policy (Code-First)
 
 - Traceability evidence is generated from code and executed tests through the AI-DLC pipeline.
-- Legacy requirement catalogs are treated as optional historical references only.
+- Archived legacy requirement and design catalogs are treated as optional historical references only.
 - Governance approval and release checks must rely on current code, tests, runtime evidence, and AI-DLC artifacts.
-- `feature-requirements/**` is non-authoritative for active AI-DLC traceability decisions.
+- Archived docs under `ai_dlc/docs/archive/legacy-requirements/**` are non-authoritative for active AI-DLC traceability decisions.
+
+### Archived Historical Documentation
+
+Historical requirement, design, and audit materials that are no longer active guidance are preserved under `ai_dlc/docs/archive/legacy-requirements/**`.
+
+Archived examples include the former top-level `feature-requirements/**`, `RefactorDesign/**`, and `reports/TEST_REPORT_AUDIT_2026_07_09.md` materials. These files are historical reference only; they are not active acceptance criteria, traceability authority, or release evidence.
+
+### Prompt Governance
+
+Active AI-DLC role prompts under `ai_dlc/prompts/**` are CCS-controlled versioned artifacts. Prompt versions are governed baselines that may evolve through Human Intent or Change Request context, CCS review, and AI-DLC validation.
+
+See `ai_dlc/docs/governance_docs/prompt_versioning_policy.md` for prompt lifecycle rules.
 
 ## Baseline and Change Request Workflow
 

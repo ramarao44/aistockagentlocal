@@ -86,15 +86,15 @@ FILE_ACCESS_POLICY:
     - prompts/
 frozen_versions:
   role_model: 1.0
-  hir_prompt: 1.0
+  hir_prompt: 1.1
   aa_prompt: 1.1
-  dev_prompt: 1.0
-  qa_prompt: 1.0
-  ops_prompt: 1.0
-  dme_prompt: 1.0
-  doc_prompt: 1.0
-  ccs_prompt: 1.0
-  aisa_prompt: 1.0
+  dev_prompt: 1.1
+  qa_prompt: 1.1
+  ops_prompt: 1.1
+  dme_prompt: 1.1
+  doc_prompt: 1.1
+  ccs_prompt: 1.1
+  aisa_prompt: 1.1
   governance_rules: 1.0
   review_gate: 1.0
   bolt_template: 1.1
