@@ -94,7 +94,27 @@ def _build_market_snapshot(data: dict, fundamentals: dict | None = None) -> str:
     )
 
 
-def _build_standardized_report_prompt(market_snapshot: str) -> str:
+def _build_user_context_block(user_context: str | None) -> str:
+    """Build the user context section for the LLM prompt.
+
+    When user_context is provided, append a personalized context block.
+    When empty/None, use a neutral fallback so the prompt structure stays stable.
+    """
+    if user_context and isinstance(user_context, str) and user_context.strip():
+        return (
+            "\n\n### User Context\n"
+            "The user has provided the following investment context:\n"
+            f'"{user_context.strip()}"\n\n'
+            "Use this context to personalize the analysis, adjust tone, and highlight relevant risks."
+        )
+    return (
+        "\n\n### User Context\n"
+        "User context not provided. Use default neutral reasoning."
+    )
+
+
+def _build_standardized_report_prompt(market_snapshot: str, user_context: str | None = None) -> str:
+    user_context_block = _build_user_context_block(user_context)
     return (
         "You are an expert stock analyst.\n"
         "Generate a short, structured, evaluation-ready technical report for the stock below.\n\n"
@@ -107,7 +127,8 @@ def _build_standardized_report_prompt(market_snapshot: str) -> str:
         "- Focus ONLY on the data provided.\n"
         "- Keep language simple and factual.\n\n"
         "STOCK DATA:\n"
-        f"{market_snapshot}\n\n"
+        f"{market_snapshot}\n"
+        f"{user_context_block}\n\n"
         "OUTPUT FORMAT (follow exactly):\n\n"
         "Summary:\n"
         "Sentence 1.\n"
@@ -322,7 +343,7 @@ def _deterministic_fallback_report(data: dict) -> str:
     )
 
 
-def _enforce_standardized_report(data: dict, raw_output: str, market_snapshot: str, master: dict | None = None) -> str:
+def _enforce_standardized_report(data: dict, raw_output: str, market_snapshot: str, user_context: str | None = None, master: dict | None = None) -> str:
     clean = _strip_ansi(raw_output or "").strip()
     if _is_valid_standardized_report(clean):
         return clean
@@ -332,7 +353,7 @@ def _enforce_standardized_report(data: dict, raw_output: str, market_snapshot: s
         "Use EXACTLY 6 sections in this order: Summary, Indicators, Sentiment, Risks, Opportunities, Recommendation.\n"
         "Each section must have EXACTLY 2 sentences and no bullets.\n"
         "Do not add any extra text before or after the sections.\n\n"
-        + _build_standardized_report_prompt(market_snapshot)
+        + _build_standardized_report_prompt(market_snapshot, user_context=user_context)
     )
     retry_output = _strip_ansi(main_reasoning(repair_prompt, master=master)).strip()
     if _is_valid_standardized_report(retry_output):
@@ -554,6 +575,16 @@ def _infer_sentiment_label(text: str, fallback: str = "neutral") -> str:
     return fallback
 
 
+def _extract_user_context(master: dict | None) -> str | None:
+    """Extract user_context from the master contract's ui section."""
+    if not master:
+        return None
+    ui = master.get("ui") or {}
+    if not isinstance(ui, dict):
+        return None
+    return ui.get("user_context")
+
+
 def generate_llm_report(ticker: str, mode: str = "local", master: dict | None = None) -> str:
     """Generate report for a ticker using local models with optional cloud fallback.
 
@@ -574,7 +605,8 @@ def generate_llm_report(ticker: str, mode: str = "local", master: dict | None = 
 
     fundamentals = _load_or_compute_fundamentals(market_data.get("ticker", ticker), period="quarterly")
     market_snapshot = _build_market_snapshot(market_data, fundamentals=fundamentals)
-    standardized_prompt = _build_standardized_report_prompt(market_snapshot)
+    user_context = _extract_user_context(master)
+    standardized_prompt = _build_standardized_report_prompt(market_snapshot, user_context=user_context)
 
     if mode_value == "cloud":
         cloud_report = run_cloud_llm(standardized_prompt, master=master)
@@ -591,11 +623,11 @@ def generate_llm_report(ticker: str, mode: str = "local", master: dict | None = 
             cloud_report = run_cloud_llm(standardized_prompt, master=master)
             if cloud_report.startswith("[Cloud LLM Error]") or cloud_report.startswith("[Cloud LLM Exception]"):
                 return cloud_report
-            report_body = _enforce_standardized_report(market_data, cloud_report, market_snapshot, master=master)
+            report_body = _enforce_standardized_report(market_data, cloud_report, market_snapshot, user_context=user_context, master=master)
         else:
             return report_body
     else:
-        report_body = _enforce_standardized_report(market_data, report_body, market_snapshot, master=master)
+        report_body = _enforce_standardized_report(market_data, report_body, market_snapshot, user_context=user_context, master=master)
 
     section_map = _extract_section_map(report_body)
     section_scores = score_report_sections(section_map)
@@ -660,6 +692,7 @@ def generate_ai_report(llm_input: dict) -> dict:
                 "data_quality": "good",
                 "model_invoked": True,
                 "model_mode": mode,
+                "user_context_present": bool(ui.get("user_context")) if isinstance(ui, dict) else False,
             }
 
     technical = llm_input.get("technical") or {}
@@ -733,5 +766,6 @@ def generate_ai_report(llm_input: dict) -> dict:
         "data_quality": "good",
         "model_invoked": False,
         "model_mode": mode,
+        "user_context_present": bool(ui.get("user_context")) if isinstance(ui, dict) else False,
         "model_error": raw_report if _is_error_response(raw_report or "") else None,
     }

@@ -1,51 +1,180 @@
-# Human Intent: Integrate Skills Framework into AI-DLC Governance
+✅ 1. HUMAN INTENT (Canonical Form)
+Human Intent:  
+“As a user, I want an interactive UI where I can select exchange (NSE/BSE), timeframe, risk profile, analysis types, and optionally provide my investment context, so that the AI Stock Agent can generate a personalized and accurate stock analysis.”
 
-## Request
-I want to integrate the newly created `ai_dlc/skills/` framework into the formal AI-DLC governance structure so skills become first-class governed artifacts.
+Expanded Intent (for AI Reasoning)
+User prefers dropdowns instead of commands
 
-## Objective
-Make skills a recognized part of the AI-DLC pipeline with manifest registration, build validation, and governed execution.
+User wants multi-select analysis types
 
-## Scope
-- Add `ai_dlc/skills/` to `AI_DLC_MANIFEST.yaml` as AI-owned
-- Add skill validation to `scripts/build.py` CI gate
-- Create skill-runner.py for optional skill execution
-- Update skill-catalog.md with execution examples
+User wants context-aware LLM reasoning
 
-## Out of Scope
-- Modifying PSC (domain boundaries remain unchanged)
-- Changing FIS (no product requirement changes)
-- Modifying role prompts (prompts work as-is)
+User wants structured UI payload
 
-## Business Motivation
-Skills provide standardized, repeatable workflows for common governance operations. Integration ensures:
-- Skills are validated before merge
-- Skills are versioned and tracked
-- Skills follow clean scope policy
-- Skills cannot be bypassed or modified incorrectly
+User wants zero ambiguity in settings
 
-## Governance Constraints
-- Do not bypass AI-DLC governance
-- Do not modify PSC or FIS
-- Do not modify `ai_dlc/AI_DLC_MANIFEST.yaml` without CCS review
-- Keep human-owned and AI-owned artifacts aligned
+User wants MVP-level simplicity
 
-## Domain and Safety Constraints
-- Stay within Indian stock analysis domain
-- Skills are documentation/workflow only - no trading behavior
-- Skills respect existing file access policies
+User wants future extensibility (presets, profiles, portfolio mode)
 
-## Required Changes
-1. `ai_dlc/AI_DLC_MANIFEST.yaml` - Add SKILLS_DIR to ownership and artifacts
-2. `scripts/build.py` - Add AI_DLC_REQUIRED_SKILLS validation list
-3. `ai_dlc/skills/skill-catalog.md` - Add execution command examples
-4. `ai_dlc/skills/` - Add `__init__.py` marker file
+✅ 2. CHANGE REQUEST (CR)
+CR ID: CR-20260720-UI-001
+Title: Add Interactive Settings Panel + User Context Field
+Owner: ramarao
+Date: 2026-07-20
+Category: Non-trivial (UI + Contract + Orchestrator + LLM Reasoner)
+CR Summary
+Replace command-driven UI with an interactive settings panel that includes:
 
-## Acceptance Criteria
-- `ai_dlc/skills/` is listed in manifest under AI-owned
-- `build.py` validates skills directory on ai-dlc-check profile
-- All 10 skills are recognized in CI validation
-- Skills follow same governance as prompts/specs/bolts
+Exchange selector (NSE/BSE)
 
-## Start Command
-HIR, process Human Intent and prepare governed AI-DLC workflow for skills integration.
+Timeframe selector
+
+Risk profile selector
+
+Analysis type multi-select
+
+User context free-text field
+
+Updated UI contract (UI_CONTRACT_V2)
+
+Orchestrator support for new field
+
+LLM Reasoner support for user_context
+
+This change improves UX, reduces errors, and enhances personalization.
+
+✅ 3. IMPACT ANALYSIS (MANDATORY)
+Changed Modules
+Area	Files
+UI	src/ui/chainlit_ui.py, main.py
+Contracts	src/core/contracts/ui_contract.py
+Orchestrator	src/core/orchestrator.py
+LLM Reasoner	src/ai/llm_reasoner.py
+Docs	DESIGN_DEVELOPMENT_DOCUMENT.md, 01-ui-orchestrator-flow.md
+Tests	scripts/test_mvp.py, tests/test_contract_pipeline_unittest.py
+
+
+New Field Added
+Code
+user_context: Optional[str]
+Behavior Impact
+Component	Impact
+UI	Must capture new field and send in payload
+Orchestrator	Must pass user_context into MASTER_CONTRACT
+LLM Reasoner	Must include user_context in prompt construction
+Contracts	Must add new field to UI_CONTRACT_V2
+Tests	Must validate new field presence and propagation
+
+
+Risk Level: Medium
+Mitigation:
+Contract-first update
+
+Add tests for new field
+
+Update design docs
+
+Run CI profile with CR ID
+
+✅ 4. UPDATED UI CONTRACT (UI_CONTRACT_V2)
+New Contract Definition
+json
+{
+  "symbol": "string",
+  "exchange": "NSE | BSE",
+  "timeframe": "daily | weekly | monthly | quarterly | yearly",
+  "analysis_types": ["technical", "fundamental", "sentiment", "trend", "ai"],
+  "risk_profile": "low | medium | high",
+  "output_format": "json | html | email",
+  "mode": "local | optimized | cloud",
+  "user_context": "string | null"
+}
+FR Traceability
+FR-01-002: UI payload must include all required fields
+
+FR-05-001: LLM Reasoner must incorporate user context
+
+FR-04-004: Orchestrator must include/exclude modules based on analysis types
+
+✅ 5. AI IMPLEMENTATION NOTES (For LLM Reasoner)
+Prompt Addition
+Append this section to the LLM prompt:
+
+Code
+### User Context
+The user has provided the following investment context:
+"{user_context}"
+
+Use this context to personalize the analysis, adjust tone, and highlight relevant risks.
+Fallback Behavior
+If user_context is empty:
+
+Code
+User context not provided. Use default neutral reasoning.
+✅ 6. TESTER CHECKLIST (From tester-manual.md)
+Targeted Tests
+Code
+python scripts/test_mvp.py
+python scripts/test_llm_reasoning.py
+python scripts/test_market_fetcher.py
+python scripts/test_delivery.py
+tests/test_contract_pipeline_unittest.py
+Evidence to Validate
+reports/TEST_REPORT.md
+
+reports/run_summary_latest.csv
+
+reports/test_case_results_latest.csv
+
+reports/requirement_status_latest.csv
+
+Exit Criteria
+CR gate passes
+
+CI profile passes
+
+No unintended failures
+
+Documentation updated
+
+✅ 7. DEVELOPER CHECKLIST (From developer-manual.md)
+Before Implementation
+[ ] Run baseline sync
+
+[ ] Create CR workspace
+
+[ ] Complete impact analysis
+
+[ ] Approve CR
+
+After Implementation
+[ ] Run all tests
+
+[ ] Update design document
+
+[ ] Update lessons learned
+
+[ ] Update test report
+
+[ ] Get approval before push
+
+🎯 FINAL OUTPUT: What AI Should Do
+AI must understand that:
+User wants interactive UI
+
+User wants structured settings
+
+User wants context-aware reasoning
+
+AI must update UI contract
+
+AI must update orchestrator
+
+AI must update LLM Reasoner
+
+AI must follow CR governance
+
+AI must update tests and docs
+
+This package gives the AI everything needed to implement the feature safely, correctly, and traceably.

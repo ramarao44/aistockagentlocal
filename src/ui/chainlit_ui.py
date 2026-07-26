@@ -1,3 +1,14 @@
+"""Chainlit UI for AI Stock Agent — Interactive Settings Panel.
+
+Implements the Human Intent requirements from ai_dlc/human_intent.md:
+- Exchange selector (NSE/BSE)
+- Timeframe selector (daily/weekly/monthly/quarterly/yearly)
+- Risk Profile selector (low/medium/high)
+- Analysis Types multi-select (technical, fundamental, sentiment, trend, ai)
+- User Context free-text field (optional)
+- Output Format selector (json/html/email)
+"""
+
 import asyncio
 import json
 import os
@@ -25,31 +36,76 @@ DEFAULT_SETTINGS = {
     "analysis_types": ["technical", "fundamental", "ai"],
     "risk_profile": "medium",
     "output_format": "json",
+    "user_context": "",
     "debug": DEBUG_ENABLED,
 }
 
 
 @cl.on_chat_start
 async def on_chat_start():
-    """Initialize chat session."""
-    cl.user_session.set("analysis_settings", DEFAULT_SETTINGS.copy())
+    """Initialize chat session with interactive settings panel."""
+    settings = await cl.ChatSettings(
+        [
+            cl.input_widget.Select(
+                id="exchange",
+                label="Exchange",
+                values=["NSE", "BSE"],
+                initial_value="NSE",
+            ),
+            cl.input_widget.Select(
+                id="timeframe",
+                label="Timeframe",
+                values=["daily", "weekly", "monthly", "quarterly", "yearly"],
+                initial_value="daily",
+            ),
+            cl.input_widget.Select(
+                id="risk_profile",
+                label="Risk Profile",
+                values=["low", "medium", "high"],
+                initial_value="medium",
+            ),
+            cl.input_widget.MultiSelect(
+                id="analysis_types",
+                label="Analysis Types",
+                values=["technical", "fundamental", "sentiment", "trend", "ai"],
+                initial=["technical", "fundamental", "ai"],
+            ),
+            cl.input_widget.Select(
+                id="output_format",
+                label="Output Format",
+                values=["json", "html", "email"],
+                initial_value="json",
+            ),
+            cl.input_widget.TextInput(
+                id="user_context",
+                label="Investment Context (optional)",
+                placeholder="e.g., Long-term investor focused on dividend growth stocks with 5-year horizon...",
+                initial="",
+                multiline=True,
+            ),
+        ]
+    ).send()
+
+    cl.user_session.set("analysis_settings", settings)
 
     await cl.Message(
         content=(
             "📈 **Welcome to AI Stock Agent!**\n\n"
             "Configure your preferences using the **settings panel (gear icon ⚙️)** in the chat input.\n\n"
             "**Current Settings:**\n"
-            f"- Exchange: {DEFAULT_SETTINGS['exchange']}\n"
-            f"- Timeframe: {DEFAULT_SETTINGS['timeframe']}\n"
-            f"- Analysis Types: {', '.join(DEFAULT_SETTINGS['analysis_types'])}\n"
-            f"- Risk Profile: {DEFAULT_SETTINGS['risk_profile']}\n"
-            f"- Output Format: {DEFAULT_SETTINGS['output_format']}\n\n"
+            f"- Exchange: {settings.get('exchange', 'NSE')}\n"
+            f"- Timeframe: {settings.get('timeframe', 'daily')}\n"
+            f"- Analysis Types: {', '.join(settings.get('analysis_types', ['technical', 'fundamental', 'ai']))}\n"
+            f"- Risk Profile: {settings.get('risk_profile', 'medium')}\n"
+            f"- Output Format: {settings.get('output_format', 'json')}\n"
+            f"- User Context: {settings.get('user_context', '') or '(not provided)'}\n\n"
             "**Quick Commands (if panel not available):**\n"
             "- `exchange NSE|BSE`\n"
             "- `timeframe daily|weekly|monthly|quarterly|yearly`\n"
             "- `risk low|medium|high`\n"
             "- `format json|html|email`\n"
-            "- `analyses technical,fundamental,sentiment,trend,ai`\n\n"
+            "- `analyses technical,fundamental,sentiment,trend,ai`\n"
+            "- `context <your investment context>`\n\n"
             "**Enter a stock ticker to begin.** (e.g., RELIANCE, TCS)"
         )
     ).send()
@@ -67,7 +123,7 @@ async def on_message(message: cl.Message):
 
     parts = text.split()
 
-    # Handle inline settings commands
+    # Handle inline settings commands (backward compatibility)
     if parts[0].lower() == "exchange" and len(parts) > 1:
         new_val = parts[1].upper()
         if new_val in ["NSE", "BSE"]:
@@ -115,10 +171,17 @@ async def on_message(message: cl.Message):
         await cl.Message(content=f"✅ Analysis types set to: {settings['analysis_types']}").send()
         return
 
+    if parts[0].lower() == "context" and len(parts) > 1:
+        user_context = " ".join(parts[1:])
+        settings["user_context"] = user_context
+        cl.user_session.set("analysis_settings", settings)
+        await cl.Message(content=f"✅ User context set: \"{user_context}\"").send()
+        return
+
     # Parse ticker for analysis
     ticker = parts[0].upper()
     mode = "local"
-    
+
     if len(parts) >= 2:
         if parts[0].upper() in ["NSE", "BSE"]:
             settings["exchange"] = parts[0].upper()
@@ -126,7 +189,7 @@ async def on_message(message: cl.Message):
         elif parts[1].lower() in ["local", "cloud"]:
             mode = parts[1].lower()
 
-    # Build ui_payload from user session settings
+    # Build ui_payload from user session settings (includes user_context)
     ui_payload = {
         "symbol": ticker,
         "exchange": settings.get("exchange", "NSE"),
@@ -134,6 +197,7 @@ async def on_message(message: cl.Message):
         "analysis_types": settings.get("analysis_types", ["technical", "fundamental", "ai"]),
         "risk_profile": settings.get("risk_profile", "medium"),
         "output_format": settings.get("output_format", "json"),
+        "user_context": settings.get("user_context", ""),
         "debug": settings.get("debug", DEBUG_ENABLED),
         "mode": mode,
     }
@@ -142,6 +206,7 @@ async def on_message(message: cl.Message):
         content=f"🔍 **Running analysis for {ticker}** ({mode} mode)...\n\n"
         f"**Settings:** Exchange={ui_payload['exchange']}, Timeframe={ui_payload['timeframe']}, "
         f"Analyses={', '.join(ui_payload['analysis_types'])}, Risk={ui_payload['risk_profile']}"
+        + (f", Context=\"{ui_payload['user_context']}\"" if ui_payload.get("user_context") else "")
     ).send()
 
     master = await asyncio.to_thread(
