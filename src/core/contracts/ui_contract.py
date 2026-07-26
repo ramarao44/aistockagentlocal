@@ -27,3 +27,12 @@ UI_CONTRACT_V1 = {
     # Data quality flag
     "data_quality": "unknown"
 }
+
+
+# UI_CONTRACT_V2: Adds user_context field for personalized, context-aware LLM reasoning.
+# Backward compatible with V1 - all V1 fields preserved unchanged.
+UI_CONTRACT_V2 = {
+    **UI_CONTRACT_V1,
+    "version": "2.0",
+    "user_context": None,       # Optional[str] - free-text investment context for LLM personalization
+}

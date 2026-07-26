@@ -9,8 +9,9 @@ from src.core.contracts.sentiment_contract import SENTIMENT_CONTRACT_V1
 from src.core.contracts.technical_contract import TECHNICAL_CONTRACT_V1
 from src.core.contracts.timeframe_contract import TIMEFRAME_CONTRACT_V1
 from src.core.contracts.trend_contract import TREND_CONTRACT_V1
-from src.core.contracts.ui_contract import UI_CONTRACT_V1
+from src.core.contracts.ui_contract import UI_CONTRACT_V1, UI_CONTRACT_V2
 from src.core.orchestrator import run_pipeline
+from src.ai.llm_reasoner import _build_user_context_block, _build_standardized_report_prompt
 
 
 def assert_contract_shape(testcase: unittest.TestCase, template, payload, path="root"):
@@ -209,6 +210,93 @@ class ContractPipelineTests(unittest.TestCase):
         )
         self.assertTrue(master["ai_report"].get("summary"))
         self.assertIn("html_report", master["llm_context"])
+
+    # --- New tests for UI_CONTRACT_V2 user_context feature (CR-20260720-UI-001) ---
+
+    def test_ui_contract_v2_has_user_context_field(self):
+        """UI_CONTRACT_V2 must include user_context field and inherit V1 fields."""
+        self.assertIn("user_context", UI_CONTRACT_V2)
+        self.assertEqual(UI_CONTRACT_V2["version"], "2.0")
+        # Backward compatibility: all V1 keys present in V2
+        for key in UI_CONTRACT_V1:
+            self.assertIn(key, UI_CONTRACT_V2, f"V2 missing V1 key: {key}")
+
+    def test_user_context_propagation_to_master_contract(self):
+        """user_context from ui_payload must propagate to master['ui']."""
+        p1, p2, p3, p4 = self._common_patches()
+        ui = self._base_ui(["technical"])
+        ui["user_context"] = "Long-term investor focused on dividend stocks"
+
+        with p1, p2, p3, p4:
+            master = run_pipeline(ui_payload=ui)
+
+        self.assertEqual(master["orchestrator"]["status"], "complete")
+        self.assertEqual(master["ui"].get("user_context"), "Long-term investor focused on dividend stocks")
+
+    def test_user_context_passed_to_llm_input(self):
+        """user_context must flow into generate_ai_report via llm_input['ui']."""
+        p1, p2, p3, p4 = self._common_patches()
+        captured_llm_input = {}
+
+        def capture_generate_ai_report(llm_input):
+            captured_llm_input.update(llm_input)
+            return {
+                "summary": "Test summary",
+                "sentiment": "neutral",
+                "risks": ["Test risk"],
+                "opportunities": ["Test opportunity"],
+                "recommendation": "Test recommendation",
+                "probability": 0.5,
+                "data_quality": "good",
+            }
+
+        ui = self._base_ui(["ai"])
+        ui["user_context"] = "Swing trader with 2-week horizon"
+
+        with p1, p2, p3, p4, \
+            patch("src.core.orchestrator.build_timeframe_config", return_value={
+                "selected": "daily",
+                "indicator_set": ["rsi", "macd"],
+                "fundamental_horizon": "quarterly",
+                "model_weights": {"technical": 0.6, "fundamental": 0.3, "sentiment": 0.1},
+            }), \
+            patch("src.core.orchestrator.generate_ai_report", side_effect=capture_generate_ai_report):
+            master = run_pipeline(ui_payload=ui)
+
+        self.assertEqual(master["orchestrator"]["status"], "complete")
+        self.assertIn("ui", captured_llm_input)
+        self.assertEqual(
+            captured_llm_input["ui"].get("user_context"),
+            "Swing trader with 2-week horizon"
+        )
+
+    def test_user_context_block_with_context(self):
+        """_build_user_context_block must include user text when provided."""
+        block = _build_user_context_block("Risk-averse investor")
+        self.assertIn("### User Context", block)
+        self.assertIn("Risk-averse investor", block)
+        self.assertIn("personalize the analysis", block)
+
+    def test_user_context_block_without_context(self):
+        """_build_user_context_block must use neutral fallback when empty."""
+        block = _build_user_context_block(None)
+        self.assertIn("### User Context", block)
+        self.assertIn("not provided", block)
+
+        block_empty = _build_user_context_block("")
+        self.assertIn("not provided", block_empty)
+
+        block_whitespace = _build_user_context_block("   ")
+        self.assertIn("not provided", block_whitespace)
+
+    def test_standardized_prompt_includes_user_context(self):
+        """_build_standardized_report_prompt must embed user_context block."""
+        prompt = _build_standardized_report_prompt("SNAPSHOT", user_context="My custom context")
+        self.assertIn("### User Context", prompt)
+        self.assertIn("My custom context", prompt)
+
+        prompt_none = _build_standardized_report_prompt("SNAPSHOT", user_context=None)
+        self.assertIn("not provided", prompt_none)
 
 
 if __name__ == "__main__":
