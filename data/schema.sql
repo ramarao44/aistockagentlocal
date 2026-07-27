@@ -101,3 +101,96 @@ CREATE TABLE IF NOT EXISTS analysis_history (
     ai_json TEXT,
     data_quality TEXT DEFAULT 'unknown'
 );
+
+-- Stock catalog for UI dropdown selection (auto-populated by market_fetcher on successful resolution)
+CREATE TABLE IF NOT EXISTS stocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT NOT NULL UNIQUE,
+    company_name TEXT,
+    exchange TEXT NOT NULL DEFAULT 'NSE',
+    sector TEXT,
+    isin TEXT,
+    active INTEGER NOT NULL DEFAULT 1,
+    source TEXT,
+    first_seen_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_stocks_symbol ON stocks(symbol);
+CREATE INDEX IF NOT EXISTS idx_stocks_active ON stocks(active);
+CREATE INDEX IF NOT EXISTS idx_stocks_company ON stocks(company_name);
+
+-- =====================================================================
+-- Backtest / Evaluation tables (FIS-02 — Evaluation Features)
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS backtest_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL UNIQUE,
+    ts TEXT NOT NULL DEFAULT (datetime('now')),
+    timeframe TEXT NOT NULL,
+    target TEXT NOT NULL,
+    lookback_years INTEGER NOT NULL,
+    horizon_periods INTEGER NOT NULL,
+    stock_basket_json TEXT NOT NULL,
+    signals_json TEXT NOT NULL DEFAULT '[]',
+    split_json TEXT,
+    aggregate_rmse REAL,
+    aggregate_precision REAL,
+    aggregate_recall REAL,
+    aggregate_f1 REAL,
+    aggregate_accuracy REAL,
+    confidence_mean REAL,
+    probability_mean REAL,
+    params_json TEXT,
+    notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS backtest_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL REFERENCES backtest_runs(run_id),
+    symbol TEXT NOT NULL,
+    n_periods INTEGER NOT NULL DEFAULT 0,
+    rmse REAL,
+    precision REAL,
+    recall REAL,
+    f1 REAL,
+    accuracy REAL,
+    confidence REAL,
+    probability REAL DEFAULT 0.0,
+    error TEXT,
+    per_stock_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS weight_configs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL REFERENCES backtest_runs(run_id),
+    technical_weight REAL NOT NULL DEFAULT 0.25,
+    fundamental_weight REAL NOT NULL DEFAULT 0.25,
+    sentiment_weight REAL NOT NULL DEFAULT 0.25,
+    trend_weight REAL NOT NULL DEFAULT 0.25,
+    global_weight REAL NOT NULL DEFAULT 0.0,
+    aggregate_accuracy REAL,
+    is_best INTEGER NOT NULL DEFAULT 0,
+    tuned_from_run_id TEXT,
+    ts TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS sector_eval_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL REFERENCES backtest_runs(run_id),
+    sector TEXT NOT NULL,
+    stock_count INTEGER NOT NULL DEFAULT 0,
+    avg_rmse REAL,
+    avg_precision REAL,
+    avg_recall REAL,
+    avg_accuracy REAL,
+    avg_confidence REAL,
+    ts TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_brun_run_id ON backtest_runs(run_id);
+CREATE INDEX IF NOT EXISTS idx_bsnap_run_id ON backtest_snapshots(run_id);
+CREATE INDEX IF NOT EXISTS idx_bsnap_symbol ON backtest_snapshots(symbol);
+CREATE INDEX IF NOT EXISTS idx_wconf_run_id ON weight_configs(run_id);
+CREATE INDEX IF NOT EXISTS idx_seval_run_id ON sector_eval_results(run_id);
+CREATE INDEX IF NOT EXISTS idx_seval_sector ON sector_eval_results(sector);
