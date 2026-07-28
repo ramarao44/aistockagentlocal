@@ -19,17 +19,20 @@ import uuid
 from datetime import datetime
 
 
-def _grid_weights(steps: int = 5) -> list[dict[str, float]]:
+def _grid_weights(steps: int = 3) -> list[dict[str, float]]:
     """Generate grid of weight combinations that sum to 1.0.
 
-    Covers 4 signals (technical, fundamental, sentiment, trend) at
-    `steps` increments. Skips global_weight (0.0 for MVP).
+    Covers 6 signals at `steps` increments: trend (SMA), macd, supertrend,
+    rsi, volume_breakout, fundamental.
+    Steps=3 gives values [0.0, 0.5, 1.0] → ~25 valid combos.
+    Steps=4 gives values [0.0, 0.33, 0.67, 1.0] → ~116 valid combos.
+    Steps=5 gives too many (5^6=15625) — use 3 or 4 for practical speed.
     """
-    sig_names = ["technical", "fundamental", "sentiment", "trend"]
-    values = [round(i / (steps - 1), 2) for i in range(steps)]  # [0.0, 0.25, 0.5, 0.75, 1.0]
+    sig_names = ["trend", "macd", "supertrend", "rsi", "volume_breakout", "fundamental"]
+    vals = [round(i / (steps - 1), 2) for i in range(steps)]
     combos = []
 
-    for combo in itertools.product(values, repeat=4):
+    for combo in itertools.product(vals, repeat=6):
         if abs(sum(combo) - 1.0) < 0.001:
             combos.append(dict(zip(sig_names, combo)))
 
@@ -85,11 +88,13 @@ def tune_weights(
         # Save as a temp weight config (no 'best' flag yet)
         cfg = {
             "run_id": temp_run_id,
-            "technical_weight": weights["technical"],
-            "fundamental_weight": weights["fundamental"],
-            "sentiment_weight": weights["sentiment"],
-            "trend_weight": weights["trend"],
-            "global_weight": 0.0,
+            "technical_weight": weights.get("trend", 0.17),
+            "fundamental_weight": weights.get("fundamental", 0.17),
+            "sentiment_weight": 0.0,
+            "trend_weight": weights.get("macd", 0.17),
+            "global_weight": weights.get("supertrend", 0.0),
+            "rsi_weight": weights.get("rsi", 0.17),
+            "volume_breakout_weight": weights.get("volume_breakout", 0.17),
             "aggregate_accuracy": None,
             "is_best": 0,
             "ts": datetime.utcnow(),
@@ -145,11 +150,13 @@ def tune_weights(
     if best_run_id:
         best_cfg = {
             "run_id": best_run_id,
-            "technical_weight": best_weights.get("technical", 0.25),
-            "fundamental_weight": best_weights.get("fundamental", 0.25),
-            "sentiment_weight": best_weights.get("sentiment", 0.25),
-            "trend_weight": best_weights.get("trend", 0.25),
-            "global_weight": 0.0,
+            "technical_weight": best_weights.get("trend", 0.17),
+            "fundamental_weight": best_weights.get("fundamental", 0.17),
+            "sentiment_weight": 0.0,
+            "trend_weight": best_weights.get("macd", 0.17),
+            "global_weight": best_weights.get("supertrend", 0.0),
+            "rsi_weight": best_weights.get("rsi", 0.17),
+            "volume_breakout_weight": best_weights.get("volume_breakout", 0.17),
             "aggregate_accuracy": best_acc,
             "is_best": 1,
             "tuned_from_run_id": previous_best.run_id if previous_best else None,

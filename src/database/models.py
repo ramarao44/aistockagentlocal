@@ -176,6 +176,8 @@ class WeightConfig(Base):
     sentiment_weight = Column(Float, default=0.25)
     trend_weight = Column(Float, default=0.25)
     global_weight = Column(Float, default=0.0)
+    rsi_weight = Column(Float, default=0.17)
+    volume_breakout_weight = Column(Float, default=0.17)
     aggregate_accuracy = Column(Float)
     is_best = Column(Integer, default=0)
     tuned_from_run_id = Column(String)
