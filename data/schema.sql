@@ -169,6 +169,8 @@ CREATE TABLE IF NOT EXISTS weight_configs (
     sentiment_weight REAL NOT NULL DEFAULT 0.25,
     trend_weight REAL NOT NULL DEFAULT 0.25,
     global_weight REAL NOT NULL DEFAULT 0.0,
+    rsi_weight REAL DEFAULT 0.17,
+    volume_breakout_weight REAL DEFAULT 0.17,
     aggregate_accuracy REAL,
     is_best INTEGER NOT NULL DEFAULT 0,
     tuned_from_run_id TEXT,
