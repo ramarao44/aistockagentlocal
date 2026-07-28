@@ -99,14 +99,21 @@ def tune_weights(
         except Exception:
             pass
 
-        # Run backtest with combined_signal (reads weights from DB)
+        # Run backtest with weights passed inline to combined_signal.
+        # Use a closure so each iteration has its own weights dict.
+        def _make_test_signal(w):
+            def _fn(sym, hist):
+                from src.analysis.backtest.engine import combined_signal
+                return combined_signal(sym, hist, weights=w)
+            return _fn
+
         result = run_backtest(
             stock_basket=basket,
             timeframe=timeframe,
             target=target,
             params=None,
             history_provider=provider,
-            signal_fn=combined_signal,
+            signal_fn=_make_test_signal(weights),
         )
 
         acc = result.aggregate_precision or 0.0

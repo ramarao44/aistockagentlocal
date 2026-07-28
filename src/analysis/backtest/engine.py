@@ -418,49 +418,65 @@ def _dummy_history_provider(
 # FIS-02: Real data provider (yfinance)
 # ---------------------------------------------------------------------------
 
+def _fetch_yfinance_df(ticker: str, start: str, end: str, interval: str):
+    """Download yfinance DataFrame. Returns empty DataFrame on failure."""
+    import yfinance as yf
+    return yf.download(ticker, start=start, end=end, interval=interval,
+                       progress=False, auto_adjust=True)
+
+
+def _yfinance_to_history(df) -> list[dict]:
+    """Convert yfinance DataFrame to ordered list of OHLCV dicts."""
+    history: list[dict] = []
+    for idx, row in df.iterrows():
+        def _safe_float(key: str) -> float | None:
+            if key not in df.columns:
+                return None
+            val = row[key]
+            if hasattr(val, "iloc"):
+                return float(val.iloc[0])
+            return float(val)
+
+        history.append({
+            "date": str(idx.date()) if hasattr(idx, "date") else str(idx),
+            "open": _safe_float("Open"),
+            "high": _safe_float("High"),
+            "low": _safe_float("Low"),
+            "close": _safe_float("Close"),
+            "volume": int(row["Volume"].iloc[0]) if "Volume" in df.columns and hasattr(row.get("Volume", 0), "iloc") else (int(row["Volume"]) if "Volume" in df.columns else 0),
+        })
+    return history
+
+
 def yfinance_history_provider(
     symbol: str, timeframe: str, lookback_years: int
 ) -> list[dict]:
     """Fetch real historical price data from yfinance.
 
+    Tries NSE (.NS) first, then falls back to BSE (.BO) if NSE fails.
+    If both fail, returns synthetic dummy data for CI/offline use.
+
     Returns a list of dicts with keys: close, open, high, low, volume, date.
-    Sorted oldest-first. Falls back to dummy data if yfinance fails.
+    Sorted oldest-first.
     """
     try:
         import yfinance as yf
 
-        ticker = f"{symbol}.NS"
         days_needed = lookback_years * 365
         end = datetime.now()
         start = end - timedelta(days=days_needed)
+        start_str = start.strftime("%Y-%m-%d")
+        end_str = end.strftime("%Y-%m-%d")
+        interval = "1wk" if timeframe == "weekly" else "1d"
 
-        interval = "1d"
-        if timeframe == "weekly":
-            interval = "1wk"
+        # Try NSE first, then BSE
+        tickers_to_try = [f"{symbol}.NS", f"{symbol}.BO"]
+        for ticker in tickers_to_try:
+            df = _fetch_yfinance_df(ticker, start_str, end_str, interval)
+            if df is not None and not df.empty:
+                return _yfinance_to_history(df)
 
-        df = yf.download(
-            ticker,
-            start=start.strftime("%Y-%m-%d"),
-            end=end.strftime("%Y-%m-%d"),
-            interval=interval,
-            progress=False,
-            auto_adjust=True,
-        )
-
-        if df.empty:
-            return _dummy_history_provider(symbol, timeframe, lookback_years)
-
-        history: list[dict] = []
-        for idx, row in df.iterrows():
-            history.append({
-                "date": str(idx.date()) if hasattr(idx, "date") else str(idx),
-                "open": float(row["Open"]) if "Open" in row else None,
-                "high": float(row["High"]) if "High" in row else None,
-                "low": float(row["Low"]) if "Low" in row else None,
-                "close": float(row["Close"]) if "Close" in row else None,
-                "volume": int(row["Volume"]) if "Volume" in row else 0,
-            })
-        return history
+        return _dummy_history_provider(symbol, timeframe, lookback_years)
     except Exception:
         return _dummy_history_provider(symbol, timeframe, lookback_years)
 
@@ -564,28 +580,43 @@ def supertrend_flip_signal(symbol: str, history: list[dict]) -> list[int | None]
     return preds
 
 
-def combined_signal(symbol: str, history: list[dict]) -> list[int | None]:
+def combined_signal(
+    symbol: str,
+    history: list[dict],
+    weights: dict[str, float] | None = None,
+) -> list[int | None]:
     """Weighted ensemble of trend_score, MACD, and SuperTrend signals.
 
-    Weights are read from the best weight_config in DB (if available),
-    otherwise equal weights (33% each).
+    If inline `weights` dict provided, uses those. Otherwise reads the
+    best weight_config from DB. If neither, equal weights (33% each).
+
+    Args:
+        symbol: stock symbol.
+        history: list of OHLCV dicts.
+        weights: optional inline weights with keys 'technical',
+                 'fundamental', 'trend'.
     """
     trend = trend_score_signal(symbol, history)
     macd = macd_crossover_signal(symbol, history)
     st = supertrend_flip_signal(symbol, history)
 
-    # Try to load tuned weights from DB
-    try:
-        from src.database.crud import get_best_weight_config
-        best = get_best_weight_config()
-        if best:
-            w_tech = best.technical_weight
-            w_fund = best.fundamental_weight
-            w_trend = best.trend_weight
-        else:
+    if weights is not None:
+        w_tech = weights.get("technical", 0.33)
+        w_fund = weights.get("fundamental", 0.33)
+        w_trend = weights.get("trend", 0.34)
+    else:
+        # Try to load tuned weights from DB
+        try:
+            from src.database.crud import get_best_weight_config
+            best = get_best_weight_config()
+            if best:
+                w_tech = best.technical_weight
+                w_fund = best.fundamental_weight
+                w_trend = best.trend_weight
+            else:
+                w_tech, w_fund, w_trend = 0.33, 0.33, 0.34
+        except Exception:
             w_tech, w_fund, w_trend = 0.33, 0.33, 0.34
-    except Exception:
-        w_tech, w_fund, w_trend = 0.33, 0.33, 0.34
 
     total_w = w_tech + w_fund + w_trend
     w_tech /= max(total_w, 0.01)
@@ -606,14 +637,19 @@ def combined_signal(symbol: str, history: list[dict]) -> list[int | None]:
             preds.append(None)
             continue
 
-        # Weighted vote — trend_score weight for trend, MACD for fund, ST for trend
+        # Weighted vote
         score = 0.0
-        trend_count = 0
+        count = 0
         for s in [trend[i], macd[i], st[i]]:
             if s is not None:
-                score += w_tech * s if s == trend[i] else (w_fund * s if s == macd[i] else w_trend * s)
-                trend_count += 1
-        preds.append(1 if score / max(trend_count, 1) >= 0.5 else 0)
+                if s == trend[i]:
+                    score += w_tech * s
+                elif s == macd[i]:
+                    score += w_fund * s
+                else:
+                    score += w_trend * s
+                count += 1
+        preds.append(1 if score / max(count, 1) >= 0.5 else 0)
     return preds
 
 

@@ -1,0 +1,187 @@
+{
+  "ts": "2026-07-28T05:30:51.412772",
+  "run_id": "eval_full_20260728_053051",
+  "phases": {},
+  "tuning": {
+    "best_weights": {
+      "technical": 0.0,
+      "fundamental": 0.25,
+      "sentiment": 0.75,
+      "trend": 0.0
+    },
+    "best_accuracy": 0.5106512159101673,
+    "combos_tested": 35
+  },
+  "unseen_validation": {
+    "label": "unseen_validation",
+    "run_id": "eval_20260728_053206_70bb33",
+    "basket": [
+      "LT",
+      "TATAMOTORS",
+      "ADANIENT",
+      "ZOMATO",
+      "SUNPHARMA",
+      "HINDUNILVR",
+      "ONGC",
+      "BHARTIARTL"
+    ],
+    "aggregate_rmse": null,
+    "aggregate_precision": 0.37039220910801457,
+    "aggregate_recall": 0.08960688668355819,
+    "per_stock": [
+      {
+        "symbol": "LT",
+        "n_periods": 498,
+        "rmse": null,
+        "precision": 0.48484848484848486,
+        "recall": 0.1415929203539823,
+        "confidence": 0.8959660297239915,
+        "probability": 0.43440777198738983
+      },
+      {
+        "symbol": "TATAMOTORS",
+        "n_periods": 504,
+        "rmse": null,
+        "precision": 0.0,
+        "recall": 0.0,
+        "confidence": 0.9025157232704403,
+        "probability": 0.05
+      },
+      {
+        "symbol": "ADANIENT",
+        "n_periods": 498,
+        "rmse": null,
+        "precision": 0.46808510638297873,
+        "recall": 0.09691629955947137,
+        "confidence": 0.8938428874734607,
+        "probability": 0.41839454307268376
+      },
+      {
+        "symbol": "ZOMATO",
+        "n_periods": 504,
+        "rmse": null,
+        "precision": 0.0,
+        "recall": 0.0,
+        "confidence": 0.8972746331236897,
+        "probability": 0.05
+      },
+      {
+        "symbol": "SUNPHARMA",
+        "n_periods": 498,
+        "rmse": null,
+        "precision": 0.475,
+        "recall": 0.07630522088353414,
+        "confidence": 0.8980891719745223,
+        "probability": 0.4265923566878981
+      },
+      {
+        "symbol": "HINDUNILVR",
+        "n_periods": 498,
+        "rmse": null,
+        "precision": 0.5102040816326531,
+        "recall": 0.11210762331838565,
+        "confidence": 0.8726114649681529,
+        "probability": 0.44520993110620044
+      },
+      {
+        "symbol": "ONGC",
+        "n_periods": 498,
+        "rmse": null,
+        "precision": 0.5,
+        "recall": 0.11637931034482758,
+        "confidence": 0.8768577494692145,
+        "probability": 0.43842887473460723
+      },
+      {
+        "symbol": "BHARTIARTL",
+        "n_periods": 498,
+        "rmse": null,
+        "precision": 0.525,
+        "recall": 0.17355371900826447,
+        "confidence": 0.8535031847133758,
+        "probability": 0.4480891719745223
+      }
+    ]
+  },
+  "timelines": [
+    {
+      "timeline": "2022-2023",
+      "run_id": "eval_20260728_053208_1249c5",
+      "precision": 0.4243379809549964,
+      "recall": 0.0989692150482634,
+      "rmse": null
+    },
+    {
+      "timeline": "2023-2024",
+      "run_id": "eval_20260728_053211_c75702",
+      "precision": 0.4243379809549964,
+      "recall": 0.0989692150482634,
+      "rmse": null
+    },
+    {
+      "timeline": "2024-2025",
+      "run_id": "eval_20260728_053214_976056",
+      "precision": 0.4243379809549964,
+      "recall": 0.0989692150482634,
+      "rmse": null
+    }
+  ],
+  "sectors": [
+    {
+      "sector": "Infrastructure",
+      "stock_count": 1,
+      "avg_precision": 0.48484848484848486,
+      "avg_recall": 0.1415929203539823,
+      "avg_confidence": 0.8959660297239915
+    },
+    {
+      "sector": "Auto",
+      "stock_count": 1,
+      "avg_precision": 0.0,
+      "avg_recall": 0.0,
+      "avg_confidence": 0.9025157232704403
+    },
+    {
+      "sector": "Conglomerate",
+      "stock_count": 1,
+      "avg_precision": 0.46808510638297873,
+      "avg_recall": 0.09691629955947137,
+      "avg_confidence": 0.8938428874734607
+    },
+    {
+      "sector": "Internet/Tech",
+      "stock_count": 1,
+      "avg_precision": 0.0,
+      "avg_recall": 0.0,
+      "avg_confidence": 0.8972746331236897
+    },
+    {
+      "sector": "Pharma",
+      "stock_count": 1,
+      "avg_precision": 0.475,
+      "avg_recall": 0.07630522088353414,
+      "avg_confidence": 0.8980891719745223
+    },
+    {
+      "sector": "FMCG",
+      "stock_count": 1,
+      "avg_precision": 0.5102040816326531,
+      "avg_recall": 0.11210762331838565,
+      "avg_confidence": 0.8726114649681529
+    },
+    {
+      "sector": "Oil & Gas",
+      "stock_count": 1,
+      "avg_precision": 0.5,
+      "avg_recall": 0.11637931034482758,
+      "avg_confidence": 0.8768577494692145
+    },
+    {
+      "sector": "Telecom",
+      "stock_count": 1,
+      "avg_precision": 0.525,
+      "avg_recall": 0.17355371900826447,
+      "avg_confidence": 0.8535031847133758
+    }
+  ]
+}

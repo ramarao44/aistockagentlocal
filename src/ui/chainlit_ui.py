@@ -137,13 +137,23 @@ async def on_chat_start():
 
     await cl.Message(content=dashboard).send()
 
-    # ── Run Analysis action button ──
+    # ── Action buttons ──
     actions = [
         cl.Action(
             name="run_analysis",
             payload={},
             label="🔍 Run Analysis",
-        )
+        ),
+        cl.Action(
+            name="run_evaluation",
+            payload={},
+            label="📊 Run Evaluation",
+        ),
+        cl.Action(
+            name="show_last_eval",
+            payload={},
+            label="📋 Last Eval Report",
+        ),
     ]
     await cl.Message(content="", actions=actions).send()
 
@@ -335,3 +345,74 @@ async def _run_pipeline(ticker: str, settings: dict):
         await cl.Message(
             content="No AI report generated. Ensure **ai** is included in your analysis types."
         ).send()
+
+
+# ────────────────────────────────────────────────────────────────
+#  FIS-02: Evaluation actions
+# ────────────────────────────────────────────────────────────────
+
+@cl.action_callback("run_evaluation")
+async def on_run_evaluation(action: cl.Action):
+    """User clicked Run Evaluation — kicks off full backtest pipeline."""
+    await cl.Message(content="🚀 **Starting full evaluation pipeline (Phases 1-4)...**\n\nThis may take several minutes as it fetches real market data.").send()
+
+    try:
+        from src.analysis.eval_runner import run_full_evaluation, eval_summary_text
+
+        report = await asyncio.to_thread(run_full_evaluation)
+        summary = eval_summary_text(report)
+
+        await cl.Message(content=summary).send()
+        await cl.Message(
+            content=(
+                f"📁 **Report saved:** `{report.get('json_path', 'N/A')}`\n"
+                f"📊 **CSV saved:** `{report.get('csv_path', 'N/A')}`"
+            )
+        ).send()
+
+    except Exception as exc:
+        await cl.Message(content=f"❌ **Evaluation failed:** {exc}").send()
+
+
+@cl.action_callback("show_last_eval")
+async def on_show_last_eval(action: cl.Action):
+    """Show the most recent evaluation run from DB."""
+    try:
+        from src.database.crud import list_backtest_runs, get_snapshots_for_run
+
+        runs = await asyncio.to_thread(list_backtest_runs, 5)
+        if not runs:
+            await cl.Message(content="📭 No evaluation runs found. Click **📊 Run Evaluation** first.").send()
+            return
+
+        latest = runs[0]
+        snapshots = await asyncio.to_thread(get_snapshots_for_run, latest.run_id)
+
+        lines = [
+            "# 📋 Latest Evaluation",
+            f"**Run ID:** `{latest.run_id}`",
+            f"**Date:** {latest.ts}",
+            f"**Timeframe:** {latest.timeframe} | **Target:** {latest.target}",
+            f"**Precision:** {latest.aggregate_precision:.3f}" if latest.aggregate_precision else "**Precision:** N/A",
+            f"**Recall:** {latest.aggregate_recall:.3f}" if latest.aggregate_recall else "**Recall:** N/A",
+            f"**RMSE:** {latest.aggregate_rmse:.4f}" if latest.aggregate_rmse else "**RMSE:** N/A",
+            "",
+            "## Per-Stock Results",
+            "| Symbol | Periods | Precision | Recall | RMSE |",
+            "|--------|---------|-----------|--------|------|",
+        ]
+
+        for s in snapshots[:20]:
+            prec = f"{s.precision:.3f}" if s.precision else "-"
+            rec = f"{s.recall:.3f}" if s.recall else "-"
+            rmse = f"{s.rmse:.4f}" if s.rmse else "-"
+            lines.append(f"| `{s.symbol}` | {s.n_periods} | {prec} | {rec} | {rmse} |")
+
+        if len(snapshots) > 20:
+            lines.append(f"| ... | ... | ... | ... | ... |")
+            lines.append(f"| *{len(snapshots) - 20} more stocks* | | | | |")
+
+        await cl.Message(content="\n".join(lines)).send()
+
+    except Exception as exc:
+        await cl.Message(content=f"❌ **Could not load eval report:** {exc}").send()
