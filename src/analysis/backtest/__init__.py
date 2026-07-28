@@ -21,11 +21,14 @@ from .engine import (
     PerStockResult,
     compute_metrics,
     combined_signal,
+    fundamental_pe_signal,
     macd_crossover_signal,
     persist_backtest_result,
+    rsi_signal,
     run_backtest,
     supertrend_flip_signal,
     trend_score_signal,
+    volume_breakout_signal,
     yfinance_history_provider,
 )
 
@@ -38,10 +41,13 @@ __all__ = [
     "PerStockResult",
     "combined_signal",
     "compute_metrics",
+    "fundamental_pe_signal",
     "macd_crossover_signal",
     "persist_backtest_result",
+    "rsi_signal",
     "run_backtest",
     "supertrend_flip_signal",
     "trend_score_signal",
+    "volume_breakout_signal",
     "yfinance_history_provider",
 ]

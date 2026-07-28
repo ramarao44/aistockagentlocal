@@ -538,6 +538,118 @@ def macd_crossover_signal(symbol: str, history: list[dict]) -> list[int | None]:
     return preds
 
 
+def rsi_signal(symbol: str, history: list[dict], window: int = 14) -> list[int | None]:
+    """RSI overbought/oversold signal (FIS-11).
+
+    Bullish (1) when RSI < 30 (oversold — potential rally).
+    Bearish (0) when RSI > 70 (overbought — potential reversal).
+    """
+    preds: list[int | None] = []
+    closes = [h.get("close") for h in history]
+
+    if len(closes) < window + 1:
+        return [None] * len(closes)
+
+    def _compute_rsi(prices: list, period: int) -> float:
+        gains = losses = 0.0
+        for i in range(1, len(prices)):
+            diff = prices[i] - prices[i - 1]
+            if diff > 0:
+                gains += diff
+            else:
+                losses += abs(diff)
+        avg_gain = gains / period if period > 0 else 0.01
+        avg_loss = losses / period if period > 0 else 0.01
+        rs = avg_gain / max(avg_loss, 0.001)
+        return 100 - (100 / (1 + rs))
+
+    for i in range(len(closes)):
+        if i >= len(closes) - 1:
+            preds.append(None)
+            continue
+        if i < window:
+            preds.append(None)
+            continue
+        lookback = [c for c in closes[i - window + 1 : i + 1] if c is not None]
+        if len(lookback) < window:
+            preds.append(None)
+            continue
+        rsi = _compute_rsi(lookback, window)
+        if rsi < 30:
+            preds.append(1)  # oversold → bullish
+        elif rsi > 70:
+            preds.append(0)  # overbought → bearish
+        else:
+            preds.append(None)  # neutral — no signal
+    return preds
+
+
+def volume_breakout_signal(symbol: str, history: list[dict], lookback: int = 20, volume_mult: float = 1.5) -> list[int | None]:
+    """Volume breakout signal (FIS-12).
+
+    Bullish (1) when today's volume > avg_volume * multiplier AND price is up.
+    """
+    preds: list[int | None] = []
+    volumes = [h.get("volume") or 0 for h in history]
+    closes = [h.get("close") for h in history]
+
+    for i in range(len(closes)):
+        if i >= len(closes) - 1:
+            preds.append(None)
+            continue
+        if i < lookback:
+            preds.append(None)
+            continue
+        avg_vol = sum(volumes[i - lookback : i]) / lookback
+        if avg_vol <= 0:
+            preds.append(None)
+            continue
+        price_up = (closes[i] or 0) > (closes[i - 1] or 0)
+        vol_surge = volumes[i] > avg_vol * volume_mult
+        preds.append(1 if price_up and vol_surge else 0)
+    return preds
+
+
+def fundamental_pe_signal(symbol: str, history: list[dict]) -> list[int | None]:
+    """Fundamental P/E signal (FIS-13).
+
+    Bullish (1) when P/E < sector average P/E (undervalued).
+    Falls back to neutral (None) if no fundamental data available.
+    """
+    preds: list[int | None] = [None] * len(history)
+
+    try:
+        from src.database.crud import get_stock
+        stock = get_stock(symbol)
+        if not stock or not stock.sector:
+            return preds  # No sector data → no signal
+
+        sector = stock.sector
+        # Simple sector P/E estimation based on sector
+        sector_avg_pe_map = {
+            "Banking": 18.0, "IT": 28.0, "FMCG": 35.0, "Pharma": 25.0,
+            "Auto": 20.0, "Infrastructure": 22.0, "Oil & Gas": 15.0,
+            "Telecom": 22.0, "Energy": 16.0, "Conglomerate": 24.0,
+            "Test": 20.0,
+        }
+        sector_avg_pe = sector_avg_pe_map.get(sector, 20.0)
+
+        # Fetch recent fundamental data
+        import yfinance as yf
+        ticker = f"{symbol}.NS"
+        info = yf.Ticker(ticker).info or {}
+        pe = info.get("trailingPE") or info.get("forwardPE")
+
+        if pe and pe > 0:
+            signal = 1 if pe < sector_avg_pe else 0
+            # Apply same signal for all periods where we have history
+            for i in range(len(preds) - 1):
+                preds[i] = signal
+        return preds
+    except Exception:
+        return preds
+
+
 def supertrend_flip_signal(symbol: str, history: list[dict]) -> list[int | None]:
     """Direction signal from SuperTrend-like ATR-based bands.
 
@@ -585,70 +697,68 @@ def combined_signal(
     history: list[dict],
     weights: dict[str, float] | None = None,
 ) -> list[int | None]:
-    """Weighted ensemble of trend_score, MACD, and SuperTrend signals.
+    """Weighted ensemble of up to 6 signals (FIS-14 Rally Detector).
+
+    Signals (in order): trend_score (SMA), MACD, SuperTrend, RSI,
+    Volume Breakout, Fundamental P/E.
 
     If inline `weights` dict provided, uses those. Otherwise reads the
-    best weight_config from DB. If neither, equal weights (33% each).
+    best weight_config from DB (supports 6 signal keys). Missing keys
+    default to equal weight across available signals.
 
     Args:
         symbol: stock symbol.
         history: list of OHLCV dicts.
         weights: optional inline weights with keys 'technical',
-                 'fundamental', 'trend'.
+                 'fundamental', 'sentiment', 'trend', 'rsi',
+                 'volume_breakout'.
     """
     trend = trend_score_signal(symbol, history)
     macd = macd_crossover_signal(symbol, history)
     st = supertrend_flip_signal(symbol, history)
+    rsi = rsi_signal(symbol, history)
+    vol = volume_breakout_signal(symbol, history)
+    fund = fundamental_pe_signal(symbol, history)
+
+    signal_names = ["trend", "macd", "supertrend", "rsi", "volume_breakout", "fundamental"]
+    signal_arrays = [trend, macd, st, rsi, vol, fund]
+    default_w = 1.0 / len(signal_names)
 
     if weights is not None:
-        w_tech = weights.get("technical", 0.33)
-        w_fund = weights.get("fundamental", 0.33)
-        w_trend = weights.get("trend", 0.34)
+        w = [weights.get(n, default_w) for n in signal_names]
     else:
-        # Try to load tuned weights from DB
         try:
             from src.database.crud import get_best_weight_config
             best = get_best_weight_config()
             if best:
-                w_tech = best.technical_weight
-                w_fund = best.fundamental_weight
-                w_trend = best.trend_weight
+                w = [
+                    getattr(best, f"{n}_weight", default_w) if n != "macd" and n != "supertrend" else
+                    (best.technical_weight if n == "trend" else
+                     best.sentiment_weight if n == "volume_breakout" else
+                     best.trend_weight if n == "supertrend" else
+                     best.fundamental_weight if n == "fundamental" else
+                     default_w)
+                    for n in signal_names
+                ]
             else:
-                w_tech, w_fund, w_trend = 0.33, 0.33, 0.34
+                w = [default_w] * len(signal_names)
         except Exception:
-            w_tech, w_fund, w_trend = 0.33, 0.33, 0.34
+            w = [default_w] * len(signal_names)
 
-    total_w = w_tech + w_fund + w_trend
-    w_tech /= max(total_w, 0.01)
-    w_fund /= max(total_w, 0.01)
-    w_trend /= max(total_w, 0.01)
+    total_w = sum(w)
+    w = [x / max(total_w, 0.01) for x in w]
 
     preds: list[int | None] = []
     for i in range(len(history)):
-        signals = []
-        if trend[i] is not None:
-            signals.append(trend[i])
-        if macd[i] is not None:
-            signals.append(macd[i])
-        if st[i] is not None:
-            signals.append(st[i])
+        vals = [arr[i] for arr in signal_arrays]
+        non_none = [(v, wt) for v, wt in zip(vals, w) if v is not None]
 
-        if not signals:
+        if not non_none:
             preds.append(None)
             continue
 
-        # Weighted vote
-        score = 0.0
-        count = 0
-        for s in [trend[i], macd[i], st[i]]:
-            if s is not None:
-                if s == trend[i]:
-                    score += w_tech * s
-                elif s == macd[i]:
-                    score += w_fund * s
-                else:
-                    score += w_trend * s
-                count += 1
+        score = sum(v * wt for v, wt in non_none)
+        count = len(non_none)
         preds.append(1 if score / max(count, 1) >= 0.5 else 0)
     return preds
 
